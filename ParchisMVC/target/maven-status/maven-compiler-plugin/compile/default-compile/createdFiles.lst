@@ -1,0 +1,13 @@
+com\equipo5\parchis\PresentacionJuego\VentanaPartida.class
+com\equipo5\parchis\ui\UITheme.class
+com\equipo5\parchis\ModeloJuego\Juego.class
+com\equipo5\parchis\ui\GradientPanel.class
+com\equipo5\parchis\PresentacionJuego\VentanaLobby.class
+com\equipo5\parchis\controlador\ControlJuego.class
+com\equipo5\parchis\ui\Buttons$1.class
+com\equipo5\parchis\ui\CardPanel.class
+com\equipo5\parchis\ModeloJuego\Juego$Estado.class
+com\equipo5\parchis\ui\Buttons.class
+com\equipo5\parchis\ModeloJuego\Dado.class
+com\equipo5\parchis\ModeloJuego\Jugador.class
+com\equipo5\parchis\ParchisMain.class

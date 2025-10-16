@@ -1,0 +1,15 @@
+@startuml
+actor Jugador
+participant VentanaPartida
+participant ControlJuego
+participant Juego
+participant Dado
+
+Jugador -> VentanaPartida : click 'Lanzar dado'
+VentanaPartida -> ControlJuego : lanzarDadoYObtenerMensaje()
+ControlJuego -> Juego : lanzarDado()
+Juego -> Dado : lanzar()
+Dado --> Juego : valor
+Juego --> ControlJuego : valor
+ControlJuego --> VentanaPartida : "Jugador X lanza: valor"
+@enduml
