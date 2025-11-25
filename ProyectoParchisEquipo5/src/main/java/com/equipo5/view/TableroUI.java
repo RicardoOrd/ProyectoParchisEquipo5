@@ -9,8 +9,6 @@ import java.util.List;
 import javax.swing.*;
 
 /**
- * Interfaz Gráfica del Tablero de Parchís.
- * Se encarga de dibujar el estado actual del juego (Pizarra).
  */
 public class TableroUI extends javax.swing.JFrame {
 
