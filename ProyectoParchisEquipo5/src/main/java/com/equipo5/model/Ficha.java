@@ -3,7 +3,7 @@ package com.equipo5.model;
 public class Ficha {
     private String color;
     private int id; // Identificador (1, 2, 3 o 4)
-    private int posicion; // 0 = Base, 1-68 = Tablero, >100 = Pasillo Meta
+    private int posicion; // 0 = Base, 1-68 = Tablero
     private boolean enBase;
     private boolean enMeta;
 
@@ -15,13 +15,16 @@ public class Ficha {
         this.enMeta = false;
     }
 
-    // --- Métodos para mover la ficha ---
+    // --- Métodos de Lógica ---
     
     public void avanzar(int pasos) {
+        // Al avanzar, asumimos que ya no está en base
+        this.enBase = false; 
         this.posicion += pasos;
-        this.enBase = false;
-        // Aquí podrías agregar lógica simple de límites si supera el 68 (vuelta al tablero)
-        if (this.posicion > 68 && posicion < 100) {
+        
+        // Lógica circular simple (Tablero de 68 casillas)
+        // Si pasa del 68, vuelve a empezar (1, 2, 3...)
+        if (this.posicion > 68) {
             this.posicion -= 68;
         }
     }
@@ -51,6 +54,11 @@ public class Ficha {
 
     public boolean isEnBase() {
         return enBase;
+    }
+
+    // IMPORTANTE: Este setter lo necesita el Control para sacarla de casa manualmente
+    public void setEnBase(boolean enBase) {
+        this.enBase = enBase;
     }
     
     public boolean isEnMeta() {

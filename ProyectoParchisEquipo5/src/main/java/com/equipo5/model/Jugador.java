@@ -1,36 +1,46 @@
 package com.equipo5.model;
 
+import java.util.UUID;
+
 public class Jugador {
-    private String nombre;
-    private String color; // "ROJO", "VERDE", etc.
-    
-    // Constructor vacío
+    private String playerId;
+    private String displayName;
+    private String color;
+    private String avatar;
+    private boolean listo; // NUEVO: Estado en el lobby
+
     public Jugador() {
+        this.playerId = UUID.randomUUID().toString();
+        this.listo = false;
     }
 
-    // Constructor con nombre
     public Jugador(String nombre) {
-        this.nombre = nombre;
+        this.playerId = UUID.randomUUID().toString();
+        this.displayName = nombre;
+        this.avatar = "default";
+        this.listo = false;
     }
 
-    public String getNombre() {
-        return nombre;
-    }
+    public String getPlayerId() { return playerId; }
+    public String getNombre() { return displayName; }
+    public void setNombre(String nombre) { this.displayName = nombre; }
+    
+    public String getColor() { return color; }
+    public void setColor(String color) { this.color = color; }
+    
+    public boolean isListo() { return listo; }
+    public void setListo(boolean listo) { this.listo = listo; }
 
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public String getColor() {
-        return color;
-    }
-
-    public void setColor(String color) {
-        this.color = color;
+    @Override
+    public String toString() {
+        return displayName + (listo ? " [LISTO]" : " [ESPERANDO]");
     }
     
     @Override
-    public String toString() {
-        return nombre + " (" + (color != null ? color : "Sin color") + ")";
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Jugador jugador = (Jugador) obj;
+        return playerId != null && playerId.equals(jugador.playerId);
     }
 }

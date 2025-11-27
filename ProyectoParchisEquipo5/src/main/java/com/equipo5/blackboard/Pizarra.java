@@ -1,6 +1,7 @@
 package com.equipo5.blackboard;
 
 import com.equipo5.model.Jugador;
+import com.equipo5.model.Sala;
 import com.equipo5.model.Tablero;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,6 +20,9 @@ public class Pizarra extends Observable {
     private boolean juegoIniciado;
     private String ultimoMensaje;     // Para logs o chat simple
     private int turnoActualIndex;     // Índice del jugador que tiene el turno (0 a 3)
+    
+    // --- NUEVO: Cumplimiento con Documentación (Gestión de Sala) ---
+    private Sala infoSala; 
 
     public Pizarra() {
         // Usamos lista sincronizada para seguridad en servidor multihilo
@@ -27,6 +31,9 @@ public class Pizarra extends Observable {
         this.juegoIniciado = false;
         this.turnoActualIndex = 0;
         this.ultimoMensaje = "Pizarra Inicializada";
+        
+        // Creamos una Sala por defecto (pública, 4 jugadores)
+        this.infoSala = new Sala(true, 4);
     }
 
     // --- MÉTODOS DE ESCRITURA (Modifican el estado) ---
@@ -37,8 +44,12 @@ public class Pizarra extends Observable {
      * @return true si se agregó, false si la sala está llena o el juego ya empezó
      */
     public synchronized boolean registrarJugador(Jugador j) {
-        if (jugadores.size() < 4 && !juegoIniciado) {
+        // Validamos usando la lógica de la Sala (según documento)
+        if (infoSala.hayEspacio() && !juegoIniciado) {
+            // Agregamos tanto a la lista local como al objeto Sala
             jugadores.add(j);
+            infoSala.agregarJugador(j);
+            
             setUltimoMensaje("Jugador conectado: " + j.getNombre());
             notificarCambio("NUEVO_JUGADOR", j);
             return true;
@@ -51,6 +62,8 @@ public class Pizarra extends Observable {
      */
     public void setJuegoIniciado(boolean iniciado) {
         this.juegoIniciado = iniciado;
+        this.infoSala.setEnJuego(iniciado); // Actualizamos estado de la sala
+        
         if (iniciado) {
             // Paso crucial: Crear las fichas para los jugadores conectados
             this.tablero.inicializarFichas(this.jugadores);
@@ -77,7 +90,7 @@ public class Pizarra extends Observable {
         notifyObservers(new String[]{tipo, dato.toString()}); // Avisa a Control.java
     }
 
-    // --- MÉTODOS DE LECTURA (Getters) ---
+    // --- MÉTODOS DE LECTURA Y GETTERS/SETTERS ---
 
     public List<Jugador> getJugadores() {
         return new ArrayList<>(jugadores); // Retorna copia para proteger la lista original
@@ -93,5 +106,17 @@ public class Pizarra extends Observable {
 
     public String getUltimoMensaje() {
         return ultimoMensaje;
+    }
+
+    public int getTurnoActualIndex() {
+        return turnoActualIndex;
+    }
+
+    public void setTurnoActualIndex(int turnoActualIndex) {
+        this.turnoActualIndex = turnoActualIndex;
+    }
+    
+    public Sala getInfoSala() {
+        return infoSala;
     }
 }

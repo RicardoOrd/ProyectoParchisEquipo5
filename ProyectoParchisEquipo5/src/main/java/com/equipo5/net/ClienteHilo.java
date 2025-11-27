@@ -11,61 +11,66 @@ import java.net.Socket;
 public class ClienteHilo extends Thread {
     private Socket socket;
     private Pizarra pizarra;
+    private Servidor servidor;
     private PrintWriter out;
     private BufferedReader in;
     private Jugador miJugador;
 
-    public ClienteHilo(Socket socket, Pizarra pizarra) {
+    public ClienteHilo(Socket socket, Pizarra pizarra, Servidor servidor) {
         this.socket = socket;
         this.pizarra = pizarra;
+        this.servidor = servidor;
     }
 
     @Override
     public void run() {
         try {
-            // Configurar streams de entrada/salida
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
+            out.println("CONECTADO");
 
-            // 1. Protocolo de Bienvenida
-            out.println("CONECTADO: Por favor envía tu nombre");
-            
-            // 2. Esperar nombre del jugador
-            String nombreRecibido = in.readLine();
-            
-            if (nombreRecibido != null && !nombreRecibido.isEmpty()) {
-                miJugador = new Jugador(nombreRecibido);
-                boolean exito = pizarra.registrarJugador(miJugador);
-                
-                if (exito) {
-                    out.println("OK: Bienvenido " + nombreRecibido);
-                    System.out.println("Red: Jugador registrado -> " + nombreRecibido);
-                } else {
-                    out.println("ERROR: Sala llena");
-                    cerrarConexion();
-                    return;
-                }
+            String linea;
+            while ((linea = in.readLine()) != null) {
+                procesarMensaje(linea);
             }
-
-            // 3. Bucle principal: Escuchar mensajes del cliente
-            String mensaje;
-            while ((mensaje = in.readLine()) != null) {
-                System.out.println("Mensaje de " + miJugador.getNombre() + ": " + mensaje);
-                // Aquí luego conectaremos con el Control para procesar "LANZAR_DADO", etc.
-            }
-
         } catch (IOException e) {
-            System.out.println("Cliente desconectado: " + (miJugador != null ? miJugador.getNombre() : "Desconocido"));
-        } finally {
-            cerrarConexion();
+            // Desconexión
         }
     }
-    
+
+    private void procesarMensaje(String json) {
+        if (json.contains("\"type\": \"LOGIN\"")) {
+            String nombre = json.split("\"name\": \"")[1].split("\"")[0];
+            miJugador = new Jugador(nombre);
+            if (pizarra.registrarJugador(miJugador)) {
+                // Enviar confirmación y actualizar lobby a todos
+                enviarMensaje("{ \"type\": \"WELCOME\", \"color\": \"AUTO\" }");
+                servidor.broadcastLobbyStatus(); 
+            }
+        } 
+        else if (json.contains("\"type\": \"CHAT\"")) {
+            String msg = json.split("\"msg\": \"")[1].split("\"")[0];
+            // Reenviar a todos con el nombre del emisor
+            servidor.broadcast("{ \"type\": \"CHAT\", \"sender\": \"" + miJugador.getNombre() + "\", \"msg\": \"" + msg + "\" }");
+        }
+        else if (json.contains("\"type\": \"TOGGLE_READY\"")) {
+            boolean status = json.contains("\"status\": true");
+            miJugador.setListo(status);
+            // Avisar a todos del cambio de estado
+            servidor.broadcastLobbyStatus();
+        }
+        else if (json.contains("\"type\": \"START_GAME_REQUEST\"")) {
+            // Solo el host (primer jugador) debería poder iniciar, o simplificamos
+            servidor.iniciarJuego();
+        }
+        // Mensajes de juego (dado, mover)
+        else if (json.contains("ROLL") || json.contains("MOVE")) {
+            pizarra.notificarCambio(json.contains("ROLL") ? "SOLICITUD_DADO" : "SOLICITUD_MOVIMIENTO", 
+                                    json.contains("ROLL") ? miJugador.getNombre() : json.split("\"ficha\": ")[1].split(" ")[0].replace("}", "").trim());
+        }
+    }
+
     public void enviarMensaje(String msg) {
         if (out != null) out.println(msg);
-    }
-    
-    private void cerrarConexion() {
-        try { socket.close(); } catch (IOException e) {}
     }
 }
