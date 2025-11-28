@@ -1,5 +1,6 @@
 package com.equipo5.view;
 
+import com.equipo5.net.Cliente;
 import javax.swing.*;
 import java.awt.*;
 
@@ -15,7 +16,7 @@ public class UnirseSalaUI extends JFrame {
     }
 
     private void initComponents() {
-        setTitle("Unirse a Partida - Parchís Equipo 5");
+        setTitle("Unirse a Partida");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(400, 350);
         setLocationRelativeTo(null);
@@ -31,22 +32,10 @@ public class UnirseSalaUI extends JFrame {
         lblTitulo.setForeground(Color.WHITE);
 
         // 2. Nickname
-        JPanel panelNick = new JPanel(new BorderLayout());
-        panelNick.setOpaque(false);
-        JLabel lblNick = new JLabel("Tu Nickname:");
-        lblNick.setForeground(Color.WHITE);
-        txtNickname = new JTextField();
-        panelNick.add(lblNick, BorderLayout.NORTH);
-        panelNick.add(txtNickname, BorderLayout.CENTER);
+        JPanel panelNick = crearPanelCampo("Tu Nickname:", txtNickname = new JTextField());
 
         // 3. IP del Servidor
-        JPanel panelIp = new JPanel(new BorderLayout());
-        panelIp.setOpaque(false);
-        JLabel lblIp = new JLabel("IP del Servidor (Ej. 192.168.1.50):");
-        lblIp.setForeground(Color.WHITE);
-        txtIp = new JTextField("localhost"); // Por defecto localhost para pruebas
-        panelIp.add(lblIp, BorderLayout.NORTH);
-        panelIp.add(txtIp, BorderLayout.CENTER);
+        JPanel panelIp = crearPanelCampo("IP del Servidor:", txtIp = new JTextField("localhost"));
 
         // 4. Botón Unirse
         JButton btnUnirse = new JButton("CONECTARSE");
@@ -61,7 +50,7 @@ public class UnirseSalaUI extends JFrame {
         btnVolver.setForeground(Color.WHITE);
         btnVolver.addActionListener(e -> {
             dispose();
-            ventanaAnterior.setVisible(true);
+            if(ventanaAnterior != null) ventanaAnterior.setVisible(true);
         });
 
         panel.add(lblTitulo);
@@ -71,6 +60,17 @@ public class UnirseSalaUI extends JFrame {
         panel.add(btnVolver);
 
         add(panel);
+    }
+    
+    private JPanel crearPanelCampo(String titulo, JComponent campo) {
+        JPanel p = new JPanel(new BorderLayout());
+        p.setOpaque(false);
+        JLabel l = new JLabel(titulo);
+        l.setForeground(Color.WHITE);
+        l.setFont(new Font("Arial", Font.BOLD, 14));
+        p.add(l, BorderLayout.NORTH);
+        p.add(campo, BorderLayout.CENTER);
+        return p;
     }
 
     private void unirsePartida() {
@@ -82,12 +82,16 @@ public class UnirseSalaUI extends JFrame {
             return;
         }
 
-        // Crear el tablero y conectar al cliente a la IP especificada
-        TableroUI tablero = new TableroUI();
-        tablero.setVisible(true);
+        // 1. Abrir Lobby como Cliente (NO anfitrión)
+        // Pasamos 'false' porque es un cliente invitado
+        LobbyUI lobby = new LobbyUI(false); 
+        lobby.setVisible(true);
         
-        // Llamamos al método actualizado que acepta IP (ver punto 2)
-        tablero.iniciarCliente(ip, nickname);
+        // 2. Conectar Cliente
+        Cliente cliente = new Cliente();
+        cliente.setLobbyView(lobby);
+        cliente.conectar(ip, 5000, nickname);
+        lobby.setCliente(cliente);
 
         this.dispose();
     }

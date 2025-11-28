@@ -18,12 +18,9 @@ public class Ficha {
     // --- Métodos de Lógica ---
     
     public void avanzar(int pasos) {
-        // Al avanzar, asumimos que ya no está en base
         this.enBase = false; 
         this.posicion += pasos;
         
-        // Lógica circular simple (Tablero de 68 casillas)
-        // Si pasa del 68, vuelve a empezar (1, 2, 3...)
         if (this.posicion > 68) {
             this.posicion -= 68;
         }
@@ -56,7 +53,6 @@ public class Ficha {
         return enBase;
     }
 
-    // IMPORTANTE: Este setter lo necesita el Control para sacarla de casa manualmente
     public void setEnBase(boolean enBase) {
         this.enBase = enBase;
     }

@@ -27,6 +27,8 @@ public class ClienteHilo extends Thread {
         try {
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
+            
+            // Mensaje inicial de conexión exitosa
             out.println("CONECTADO");
 
             String linea;
@@ -34,39 +36,53 @@ public class ClienteHilo extends Thread {
                 procesarMensaje(linea);
             }
         } catch (IOException e) {
-            // Desconexión
+            System.out.println("Cliente desconectado: " + (miJugador != null ? miJugador.getNombre() : "Desconocido"));
+        } finally {
+            // Limpieza al desconectar
+            if (miJugador != null) {
+                pizarra.getInfoSala().eliminarJugador(miJugador);
+                servidor.broadcastLobbyStatus(); // Actualizar a los demás que se fue
+            }
+            try { socket.close(); } catch (IOException e) {}
         }
     }
 
     private void procesarMensaje(String json) {
         if (json.contains("\"type\": \"LOGIN\"")) {
-            String nombre = json.split("\"name\": \"")[1].split("\"")[0];
-            miJugador = new Jugador(nombre);
-            if (pizarra.registrarJugador(miJugador)) {
-                // Enviar confirmación y actualizar lobby a todos
-                enviarMensaje("{ \"type\": \"WELCOME\", \"color\": \"AUTO\" }");
-                servidor.broadcastLobbyStatus(); 
+            try {
+                String nombre = json.split("\"name\": \"")[1].split("\"")[0];
+                miJugador = new Jugador(nombre);
+                
+                if (pizarra.registrarJugador(miJugador)) {
+                    enviarMensaje("{ \"type\": \"WELCOME\", \"color\": \"AUTO\" }");
+                    
+                    servidor.broadcastLobbyStatus(); 
+                } else {
+                    enviarMensaje("{ \"type\": \"ERROR\", \"msg\": \"Sala llena o en juego\" }");
+                }
+            } catch (Exception e) {
+                System.out.println("Error en Login: " + json);
             }
         } 
         else if (json.contains("\"type\": \"CHAT\"")) {
-            String msg = json.split("\"msg\": \"")[1].split("\"")[0];
-            // Reenviar a todos con el nombre del emisor
-            servidor.broadcast("{ \"type\": \"CHAT\", \"sender\": \"" + miJugador.getNombre() + "\", \"msg\": \"" + msg + "\" }");
+            try {
+                String msg = json.split("\"msg\": \"")[1].split("\"")[0];
+                servidor.broadcast("{ \"type\": \"CHAT\", \"sender\": \"" + miJugador.getNombre() + "\", \"msg\": \"" + msg + "\" }");
+            } catch (Exception e) {}
         }
         else if (json.contains("\"type\": \"TOGGLE_READY\"")) {
             boolean status = json.contains("\"status\": true");
             miJugador.setListo(status);
-            // Avisar a todos del cambio de estado
-            servidor.broadcastLobbyStatus();
+            servidor.broadcastLobbyStatus(); // Actualizar checks
         }
         else if (json.contains("\"type\": \"START_GAME_REQUEST\"")) {
-            // Solo el host (primer jugador) debería poder iniciar, o simplificamos
             servidor.iniciarJuego();
         }
-        // Mensajes de juego (dado, mover)
         else if (json.contains("ROLL") || json.contains("MOVE")) {
-            pizarra.notificarCambio(json.contains("ROLL") ? "SOLICITUD_DADO" : "SOLICITUD_MOVIMIENTO", 
-                                    json.contains("ROLL") ? miJugador.getNombre() : json.split("\"ficha\": ")[1].split(" ")[0].replace("}", "").trim());
+            try {
+                String param = json.contains("ROLL") ? miJugador.getNombre() : json.split("\"ficha\": ")[1].split(" ")[0].replace("}", "").trim();
+                pizarra.notificarCambio(json.contains("ROLL") ? "SOLICITUD_DADO" : "SOLICITUD_MOVIMIENTO", param);
+            } catch (Exception e) {}
         }
     }
 

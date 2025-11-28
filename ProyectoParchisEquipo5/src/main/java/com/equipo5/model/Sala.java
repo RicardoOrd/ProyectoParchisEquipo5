@@ -11,7 +11,6 @@ public class Sala {
     private List<Jugador> jugadores;
     private boolean enJuego;
 
-    // Constructor para UC-04 Crear/Configurar partida
     public Sala(boolean publica, int maxJugadores) {
         this.codigo = generarCodigoUnico();
         this.publica = publica;
@@ -21,11 +20,9 @@ public class Sala {
     }
 
     private String generarCodigoUnico() {
-        // Genera un código corto, ej: "A1B2"
         return UUID.randomUUID().toString().substring(0, 4).toUpperCase();
     }
 
-    // Métodos del diagrama UC-02 [cite: 109]
     public boolean hayEspacio() {
         return jugadores.size() < maxJugadores;
     }
@@ -42,7 +39,6 @@ public class Sala {
         jugadores.remove(j);
     }
 
-    // Getters y Setters según diagrama [cite: 107]
     public String getCodigo() { return codigo; }
     public boolean isPublica() { return publica; }
     public List<Jugador> getJugadores() { return jugadores; }

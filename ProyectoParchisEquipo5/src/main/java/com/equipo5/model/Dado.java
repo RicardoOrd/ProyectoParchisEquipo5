@@ -21,13 +21,11 @@ public class Dado {
 
     private void registrarTiro(int valor) {
         historialTiros.add(valor);
-        // Mantenemos solo los últimos 3 tiros por eficiencia
         if (historialTiros.size() > 3) {
             historialTiros.remove(0);
         }
     }
 
-    // Regla especificada en el documento 
     public boolean tresSeisesSeguidos() {
         if (historialTiros.size() < 3) return false;
         return historialTiros.get(historialTiros.size() - 1) == 6 &&

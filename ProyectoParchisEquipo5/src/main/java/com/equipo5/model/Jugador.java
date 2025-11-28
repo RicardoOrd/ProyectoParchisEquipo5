@@ -7,7 +7,7 @@ public class Jugador {
     private String displayName;
     private String color;
     private String avatar;
-    private boolean listo; // NUEVO: Estado en el lobby
+    private boolean listo; 
 
     public Jugador() {
         this.playerId = UUID.randomUUID().toString();

@@ -7,6 +7,8 @@ import com.equipo5.net.Cliente;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
@@ -18,186 +20,156 @@ public class TableroUI extends javax.swing.JFrame {
     private JButton btnLanzarDado;
     private JLabel lblDado;
     private JLabel lblTurno;
-
-    // Referencia al Cliente de Red
+    
     private Cliente clienteRed;
-    @SuppressWarnings("unused")
-    private String miNombre;
-
-    // Modelo de datos local (replicado del servidor)
-    private Tablero modeloTablero;
-    @SuppressWarnings("unused")
-    private List<Jugador> listaJugadores;
+    private Tablero modeloTablero; 
+    
+    // Coordenadas calculadas dinámicamente
+    private Point[] coordenadasCasillas = new Point[69]; 
 
     public TableroUI() {
         initComponents();
-        this.modeloTablero = new Tablero();
-        this.listaJugadores = new ArrayList<>();
-
-        // --- IMPORTANTE: Inicializar fichas visuales ---
-        // Creamos 4 jugadores dummy para que el tablero pinte las 16 fichas en sus bases
-        // desde el principio, aunque aún no estemos conectados.
+        this.modeloTablero = new Tablero(); 
+        
+        // Inicializar dummies para ver algo antes de conectar
         List<Jugador> dummies = new ArrayList<>();
-        Jugador j1 = new Jugador("P1");
-        j1.setColor("AMARILLO");
-        dummies.add(j1);
-        Jugador j2 = new Jugador("P2");
-        j2.setColor("AZUL");
-        dummies.add(j2);
-        Jugador j3 = new Jugador("P3");
-        j3.setColor("ROJO");
-        dummies.add(j3);
-        Jugador j4 = new Jugador("P4");
-        j4.setColor("VERDE");
-        dummies.add(j4);
-
+        Jugador j1 = new Jugador("P1"); j1.setColor("AMARILLO"); dummies.add(j1);
+        Jugador j2 = new Jugador("P2"); j2.setColor("AZUL");     dummies.add(j2);
+        Jugador j3 = new Jugador("P3"); j3.setColor("ROJO");     dummies.add(j3);
+        Jugador j4 = new Jugador("P4"); j4.setColor("VERDE");    dummies.add(j4);
+        
         this.modeloTablero.inicializarFichas(dummies);
+        
+        // Forzar cálculo inicial de coordenadas
+        SwingUtilities.invokeLater(() -> panelTablero.calcularCoordenadas());
     }
 
-    /**
-     * Inicia la conexión de red.
-     *
-     * @param host Dirección IP del servidor ("localhost" o IP real).
-     * @param nickname Nombre del jugador.
-     */
+    public void setClienteExistente(Cliente cliente) {
+        this.clienteRed = cliente;
+        this.clienteRed.setTableroView(this);
+    }
+
     public void iniciarCliente(String host, String nickname) {
-        this.miNombre = nickname;
-        this.clienteRed = new Cliente(this);
+        this.clienteRed = new Cliente(); 
+        this.clienteRed.setTableroView(this); 
         this.clienteRed.conectar(host, 5000, nickname);
-        this.setTitle("Parchís - Equipo 5 - Jugador: " + nickname);
+        this.setTitle("Parchís - Jugador: " + nickname);
     }
 
     private void initComponents() {
         setTitle("Parchís - Equipo 5");
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setSize(900, 700);
+        setSize(1100, 750);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
         // --- 1. Panel Central (Tablero) ---
         panelTablero = new PanelTablero();
-        panelTablero.setBackground(new Color(240, 240, 240));
-
-        // Listener para detectar clics en las fichas
+        
         panelTablero.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 verificarClicFicha(e.getX(), e.getY());
             }
         });
-
+        
         add(panelTablero, BorderLayout.CENTER);
 
-        // --- 2. Panel Lateral (Controles) ---
+        // --- 2. Panel Lateral ---
         JPanel panelLateral = new JPanel();
-        panelLateral.setPreferredSize(new Dimension(250, 0));
+        panelLateral.setPreferredSize(new Dimension(300, 0));
         panelLateral.setLayout(new BoxLayout(panelLateral, BoxLayout.Y_AXIS));
-        panelLateral.setBackground(new Color(50, 50, 50));
+        panelLateral.setBackground(new Color(40, 40, 40)); 
         panelLateral.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Turno
-        lblTurno = new JLabel("Conectando...");
+        lblTurno = new JLabel("Esperando...");
         lblTurno.setForeground(Color.WHITE);
-        lblTurno.setFont(new Font("Arial", Font.BOLD, 16));
+        lblTurno.setFont(new Font("Arial", Font.BOLD, 18));
         lblTurno.setAlignmentX(Component.CENTER_ALIGNMENT);
         panelLateral.add(lblTurno);
         panelLateral.add(Box.createRigidArea(new Dimension(0, 30)));
 
-        // Dado Visual
-        lblDado = new JLabel("?");
-        lblDado.setFont(new Font("Arial", Font.BOLD, 60));
-        lblDado.setForeground(Color.YELLOW);
+        lblDado = new JLabel("🎲");
+        lblDado.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 80));
+        lblDado.setForeground(Color.ORANGE);
         lblDado.setAlignmentX(Component.CENTER_ALIGNMENT);
         panelLateral.add(lblDado);
-        panelLateral.add(Box.createRigidArea(new Dimension(0, 10)));
+        panelLateral.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Botón Lanzar
         btnLanzarDado = new JButton("LANZAR DADO");
         btnLanzarDado.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnLanzarDado.setBackground(new Color(0, 153, 255));
         btnLanzarDado.setForeground(Color.WHITE);
-        btnLanzarDado.setFont(new Font("Arial", Font.BOLD, 14));
+        btnLanzarDado.setFont(new Font("Arial", Font.BOLD, 16));
         btnLanzarDado.setFocusPainted(false);
-        btnLanzarDado.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        // Acción: Enviar solicitud ROLL al servidor
         btnLanzarDado.addActionListener(e -> {
-            if (clienteRed != null) {
-                clienteRed.enviar("{ \"type\": \"ROLL\" }");
-            } else {
-                agregarLog("Error: No hay conexión.");
-            }
+            if (clienteRed != null) clienteRed.enviar("{ \"type\": \"ROLL\" }");
         });
-
+        
         panelLateral.add(btnLanzarDado);
         panelLateral.add(Box.createRigidArea(new Dimension(0, 30)));
 
-        // Log de Texto
-        JLabel lblLog = new JLabel("Registro del Juego:");
+        JLabel lblLog = new JLabel("Historial:");
         lblLog.setForeground(Color.LIGHT_GRAY);
         lblLog.setAlignmentX(Component.CENTER_ALIGNMENT);
         panelLateral.add(lblLog);
-
+        
         areaLog = new JTextArea();
         areaLog.setEditable(false);
         areaLog.setLineWrap(true);
-        areaLog.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        areaLog.setBackground(new Color(60, 60, 60));
+        areaLog.setForeground(Color.WHITE);
         JScrollPane scrollLog = new JScrollPane(areaLog);
-        scrollLog.setPreferredSize(new Dimension(200, 300));
+        scrollLog.setPreferredSize(new Dimension(240, 300));
         panelLateral.add(scrollLog);
 
         add(panelLateral, BorderLayout.EAST);
     }
-
-    public void setClienteExistente(Cliente cliente) {
-        this.clienteRed = cliente;
-        // Importante: Redirigir la salida del cliente a esta vista ahora
-        // (Esto requiere lógica en Cliente.java para saber a quién mandar updates, 
-        //  ya cubierto en el Cliente.java actualizado arriba)
-    }
-
-    // Método para procesar mensajes que llegan desde Cliente.java
+    
     public void procesarMensajeJuego(String json) {
         if (json.contains("DICE_RESULT")) {
-            String valStr = json.split("\"value\": ")[1].split(" ")[0].replace("}", "").trim();
-            mostrarResultadoDado(Integer.parseInt(valStr));
-        } else if (json.contains("UPDATE")) {
-            // Lógica de update tablero...
+             String valStr = json.split("\"value\": ")[1].split(" ")[0].replace("}", "").trim();
+             mostrarResultadoDado(Integer.parseInt(valStr));
         }
-        // ... resto de lógica
+        else if (json.contains("UPDATE")) {
+             try {
+                String data = json.split("\"board\": \"")[1].split("\"")[0];
+                String[] fichasStr = data.split(",");
+                for (String fStr : fichasStr) {
+                    String[] partes = fStr.split(":");
+                    String color = partes[0];
+                    int id = Integer.parseInt(partes[1]);
+                    int pos = Integer.parseInt(partes[2]);
+                    boolean enBase = partes[3].equals("1");
+                    actualizarFichaLocal(color, id, pos, enBase);
+                }
+                panelTablero.repaint();
+            } catch (Exception e) {}
+        }
+        else if (json.contains("LOG")) {
+            String msg = json.split("\"msg\": \"")[1].split("\"")[0];
+            agregarLog(msg);
+        }
+        else if (json.contains("TURN")) {
+             // Actualizar turno visualmente si se desea
+        }
     }
-
-    // --- LÓGICA DE INPUT (Clics) ---
+    
     private void verificarClicFicha(int x, int y) {
-        if (modeloTablero == null || clienteRed == null) {
-            return;
-        }
-
-        int w = panelTablero.getWidth();
-        int h = panelTablero.getHeight();
-
-        // Iterar sobre todas las fichas para ver si alguna fue clickeada
+        if (modeloTablero == null || clienteRed == null) return;
+        
+        // Buscar ficha bajo el clic
         for (Ficha f : modeloTablero.getTodasLasFichas()) {
-            Point p = obtenerCoordenadasFicha(f, w, h);
-            // Definimos un área sensible (hitbox) de 30x30 alrededor de la ficha
-            Rectangle bounds = new Rectangle(p.x, p.y, 30, 30);
-
-            if (bounds.contains(x, y)) {
-                System.out.println("Clic en ficha ID: " + f.getId());
-                // Enviar solicitud de movimiento al servidor
+            Point p = panelTablero.obtenerCoordenadasFicha(f);
+            if (p.distance(x, y) < 25) { // Radio de clic
                 clienteRed.enviar("{ \"type\": \"MOVE\", \"ficha\": " + f.getId() + " }");
-                return; // Solo procesar un clic a la vez
+                return; 
             }
         }
     }
 
-    // --- MÉTODOS DE ACTUALIZACIÓN (Output) ---
-    // Método llamado por Cliente.java cuando recibe el JSON "UPDATE"
     public void actualizarFichaLocal(String color, int id, int pos, boolean enBase) {
-        if (modeloTablero == null) {
-            return;
-        }
-
+        if (modeloTablero == null) return;
         for (Ficha f : modeloTablero.getTodasLasFichas()) {
             if (f.getColor().equals(color) && f.getId() == id) {
                 f.setPosicion(pos);
@@ -207,131 +179,181 @@ public class TableroUI extends javax.swing.JFrame {
         }
     }
 
-    public void actualizarVista(Tablero tablero, List<Jugador> jugadores) {
-        this.modeloTablero = tablero;
-        this.listaJugadores = jugadores;
-        panelTablero.repaint();
-    }
-
-    public void actualizarTurnoInfo(String texto) {
-        lblTurno.setText(texto);
-    }
-
     public void agregarLog(String mensaje) {
         areaLog.append("> " + mensaje + "\n");
         areaLog.setCaretPosition(areaLog.getDocument().getLength());
     }
 
     public void mostrarResultadoDado(int valor) {
-        lblDado.setText(String.valueOf(valor));
+        lblDado.setText("🎲 " + valor);
     }
 
-    // Calcula dónde dibujar la ficha (usado para Pintar y para Clics)
-    private Point obtenerCoordenadasFicha(Ficha ficha, int w, int h) {
-        int x = 0, y = 0;
-        if (ficha.isEnBase()) {
-            switch (ficha.getColor()) {
-                case "AZUL":
-                    x = 60 + (ficha.getId() * 20);
-                    y = 80;
-                    break;
-                case "AMARILLO":
-                    x = w - 140 + (ficha.getId() * 20);
-                    y = 80;
-                    break;
-                case "VERDE":
-                    x = 60 + (ficha.getId() * 20);
-                    y = h - 120;
-                    break;
-                case "ROJO":
-                    x = w - 140 + (ficha.getId() * 20);
-                    y = h - 120;
-                    break;
-            }
-        } else {
-            // Lógica visual circular simplificada
-            // Mapeamos las 68 casillas a un ángulo en radianes
-            int radio = 180;
-            // Angulo 0 empieza a la derecha, ajustamos para que la casilla 1 esté donde corresponda
-            double angulo = (ficha.getPosicion() * (2 * Math.PI)) / 68;
-
-            x = (w / 2) + (int) (Math.cos(angulo) * radio);
-            y = (h / 2) + (int) (Math.sin(angulo) * radio);
-        }
-        return new Point(x, y);
-    }
-
-    // --- PANEL DE DIBUJO ---
+    // =================================================================================
+    // CLASE INTERNA: DIBUJO DEL TABLERO
+    // =================================================================================
     private class PanelTablero extends JPanel {
+        
+        // Constantes de colores
+        private final Color C_AMARILLO = new Color(255, 215, 0);
+        private final Color C_ROJO = new Color(220, 20, 60);
+        private final Color C_VERDE = new Color(34, 139, 34);
+        private final Color C_AZUL = new Color(30, 144, 255);
+        
+        private int cx, cy; // Centro
+        private int size;   // Tamaño celda base
+
+        public PanelTablero() {
+            setBackground(new Color(245, 230, 210)); // Color madera fondo
+        }
+        
+        // Método crítico: Calcular dónde va cada casilla (1-68) geométricamente
+        public void calcularCoordenadas() {
+            int w = getWidth();
+            int h = getHeight();
+            cx = w / 2;
+            cy = h / 2;
+            
+            // Tamaño relativo de una "casilla"
+            size = Math.min(w, h) / 15; 
+            
+            // Lógica simple para mapear el recorrido rectangular del parchís
+            // Este es un mapeo aproximado para dibujar las fichas sobre el dibujo
+            // Se asume un recorrido antihorario empezando a la derecha
+            
+            // NOTA: Implementación completa de mapeo requeriría 68 "if" o lógica vectorial compleja
+            // Usaremos una aproximación circular ajustada para que "aparezca" algo jugable
+            
+            int radio = (int)(size * 5.5);
+            for (int i = 1; i <= 68; i++) {
+                double angle = Math.toRadians((i - 1) * (360.0 / 68.0)); 
+                coordenadasCasillas[i] = new Point(
+                    cx + (int)(radio * Math.cos(angle)),
+                    cy + (int)(radio * Math.sin(angle))
+                );
+            }
+        }
 
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
+            calcularCoordenadas(); // Recalcular si redimensiona
+            
             Graphics2D g2 = (Graphics2D) g;
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            int w = getWidth();
-            int h = getHeight();
-            int cx = w / 2;
-            int cy = h / 2;
+            // 1. DIBUJAR BASES (Cuadrados grandes)
+            int baseSize = size * 4;
+            // Amarillo (Abajo-Der)
+            dibujarBase(g2, C_AMARILLO, getWidth() - baseSize - 20, getHeight() - baseSize - 20, baseSize);
+            // Rojo (Arriba-Der) -> Ojo: En parchís clásico suele ser Rojo Abajo-Der, Amarillo Abajo-Izq, pero depende versión
+            // Usaremos: Rojo (Der-Abajo), Verde (Izq-Abajo), Azul (Izq-Arriba), Amarillo (Der-Arriba)
+            
+            // Ajustamos posiciones estándar
+            dibujarBase(g2, C_AMARILLO, getWidth() - baseSize - 20, 20, baseSize); // Arriba Der
+            dibujarBase(g2, C_AZUL, 20, 20, baseSize); // Arriba Izq
+            dibujarBase(g2, C_VERDE, 20, getHeight() - baseSize - 20, baseSize); // Abajo Izq
+            dibujarBase(g2, C_ROJO, getWidth() - baseSize - 20, getHeight() - baseSize - 20, baseSize); // Abajo Der
 
-            // Bases
-            dibujarBase(g2, "AMARILLO", Color.YELLOW, w - 150, 50);
-            dibujarBase(g2, "AZUL", Color.BLUE, 50, 50);
-            dibujarBase(g2, "ROJO", Color.RED, w - 150, h - 150);
-            dibujarBase(g2, "VERDE", Color.GREEN, 50, h - 150);
-
-            // Centro / Meta
-            g2.setColor(Color.GRAY);
-            g2.fillRect(cx - 30, cy - 30, 60, 60);
-
-            // Camino (Circular simple para visualización)
+            // 2. DIBUJAR CAMINOS (Cruces)
             g2.setColor(Color.LIGHT_GRAY);
-            g2.setStroke(new BasicStroke(3));
-            g2.drawOval(cx - 180, cy - 180, 360, 360);
+            // Horizontal
+            g2.fillRect(0, cy - size, getWidth(), size * 2);
+            // Vertical
+            g2.fillRect(cx - size, 0, size * 2, getHeight());
+            
+            // 3. DIBUJAR META (Triángulos centrales)
+            g2.setColor(C_AMARILLO);
+            g2.fillPolygon(new int[]{cx, cx+size*2, cx+size*2}, new int[]{cy, cy-size, cy+size}, 3);
+            
+            // Dibujar círculo central
+            g2.setColor(Color.WHITE);
+            g2.fillOval(cx - size*2, cy - size*2, size*4, size*4);
+            g2.setColor(Color.BLACK);
+            g2.drawOval(cx - size*2, cy - size*2, size*4, size*4);
 
-            // Fichas
+            // 4. DIBUJAR CASILLAS (Para visualización)
+            g2.setColor(Color.GRAY);
+            for(int i=1; i<=68; i++) {
+                Point p = coordenadasCasillas[i];
+                if(p != null) g2.drawRect(p.x-5, p.y-5, 10, 10);
+            }
+
+            // 5. DIBUJAR FICHAS
             if (modeloTablero != null) {
                 for (Ficha f : modeloTablero.getTodasLasFichas()) {
-                    dibujarFicha(g2, f, w, h);
+                    dibujarFicha(g2, f);
                 }
             }
         }
 
-        private void dibujarBase(Graphics2D g, String txt, Color c, int x, int y) {
+        private void dibujarBase(Graphics2D g, Color c, int x, int y, int s) {
             g.setColor(c);
-            g.fillRoundRect(x, y, 100, 100, 15, 15);
+            g.fillRect(x, y, s, s);
             g.setColor(Color.BLACK);
-            g.drawRoundRect(x, y, 100, 100, 15, 15);
-            g.drawString(txt, x + 20, y + 55);
-        }
-
-        private void dibujarFicha(Graphics2D g, Ficha f, int w, int h) {
-            Point p = obtenerCoordenadasFicha(f, w, h);
-            g.setColor(obtenerColorReal(f.getColor()));
-            g.fillOval(p.x, p.y, 25, 25);
-            g.setColor(Color.BLACK);
-            g.setStroke(new BasicStroke(2));
-            g.drawOval(p.x, p.y, 25, 25);
+            g.setStroke(new BasicStroke(3));
+            g.drawRect(x, y, s, s);
+            
+            // Círculo blanco interno
             g.setColor(Color.WHITE);
-            g.drawString(String.valueOf(f.getId()), p.x + 8, p.y + 17);
+            g.fillOval(x + s/4, y + s/4, s/2, s/2);
         }
 
-        private Color obtenerColorReal(String c) {
-            if (c == null) {
-                return Color.GRAY;
+        private void dibujarFicha(Graphics2D g, Ficha f) {
+            Point p = obtenerCoordenadasFicha(f);
+            Color c = obtenerColorReal(f.getColor());
+            
+            int fichaSize = 28;
+            
+            // Sombra
+            g.setColor(new Color(0,0,0,80));
+            g.fillOval(p.x + 3, p.y + 3, fichaSize, fichaSize);
+            
+            // Cuerpo
+            g.setColor(c);
+            g.fillOval(p.x, p.y, fichaSize, fichaSize);
+            
+            // Borde
+            g.setColor(Color.WHITE);
+            g.setStroke(new BasicStroke(2));
+            g.drawOval(p.x, p.y, fichaSize, fichaSize);
+            
+            // Número ID
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Arial", Font.BOLD, 12));
+            g.drawString(String.valueOf(f.getId()), p.x + 10, p.y + 19);
+        }
+        
+        // Calcula posición visual final (Bases o Tablero)
+        public Point obtenerCoordenadasFicha(Ficha f) {
+            if (f.isEnBase()) {
+                int baseSize = size * 4;
+                int offsetX = (f.getId() % 2 == 0) ? 20 : -20;
+                int offsetY = (f.getId() > 2) ? 20 : -20;
+                
+                // Centros aproximados de las bases
+                switch (f.getColor()) {
+                    case "AZUL": return new Point(20 + baseSize/2 + offsetX, 20 + baseSize/2 + offsetY);
+                    case "AMARILLO": return new Point(getWidth() - 20 - baseSize/2 + offsetX, 20 + baseSize/2 + offsetY);
+                    case "VERDE": return new Point(20 + baseSize/2 + offsetX, getHeight() - 20 - baseSize/2 + offsetY);
+                    case "ROJO": return new Point(getWidth() - 20 - baseSize/2 + offsetX, getHeight() - 20 - baseSize/2 + offsetY);
+                }
+            } else {
+                int pos = f.getPosicion();
+                if (pos >= 1 && pos <= 68 && coordenadasCasillas[pos] != null) {
+                    return coordenadasCasillas[pos];
+                }
             }
+            return new Point(cx, cy); // Fallback al centro
+        }
+        
+        private Color obtenerColorReal(String c) {
+            if (c == null) return Color.GRAY;
             switch (c) {
-                case "ROJO":
-                    return Color.RED;
-                case "VERDE":
-                    return new Color(0, 180, 0);
-                case "AZUL":
-                    return Color.BLUE;
-                case "AMARILLO":
-                    return Color.YELLOW;
-                default:
-                    return Color.GRAY;
+                case "ROJO": return C_ROJO;
+                case "VERDE": return C_VERDE;
+                case "AZUL": return C_AZUL;
+                case "AMARILLO": return C_AMARILLO;
+                default: return Color.GRAY;
             }
         }
     }

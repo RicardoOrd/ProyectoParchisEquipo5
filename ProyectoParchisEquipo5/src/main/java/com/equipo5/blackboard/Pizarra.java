@@ -8,47 +8,41 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Observable;
 
-/**
- * La Pizarra (Blackboard) es la memoria central del servidor.
- * Contiene todo el estado del juego y notifica cambios a los observadores (Control).
- */
 public class Pizarra extends Observable {
     
-    // --- ESTADO DEL JUEGO (Datos) ---
     private List<Jugador> jugadores;
-    private Tablero tablero;          // El tablero con las fichas
+    private Tablero tablero;
     private boolean juegoIniciado;
-    private String ultimoMensaje;     // Para logs o chat simple
-    private int turnoActualIndex;     // Índice del jugador que tiene el turno (0 a 3)
-    
-    // --- NUEVO: Cumplimiento con Documentación (Gestión de Sala) ---
+    private String ultimoMensaje;
+    private int turnoActualIndex;
     private Sala infoSala; 
 
     public Pizarra() {
-        // Usamos lista sincronizada para seguridad en servidor multihilo
+        this(4, true); 
+    }
+
+    // Constructor que recibe la configuración real
+    public Pizarra(int maxJugadores, boolean publica) {
         this.jugadores = Collections.synchronizedList(new ArrayList<>());
-        this.tablero = new Tablero(); // Inicializamos el tablero vacío
+        this.tablero = new Tablero();
         this.juegoIniciado = false;
         this.turnoActualIndex = 0;
         this.ultimoMensaje = "Pizarra Inicializada";
         
-        // Creamos una Sala por defecto (pública, 4 jugadores)
-        this.infoSala = new Sala(true, 4);
+        // Crear la sala con la configuracion del usuario
+        this.infoSala = new Sala(publica, maxJugadores);
     }
 
-    // --- MÉTODOS DE ESCRITURA (Modifican el estado) ---
-    
-    /**
-     * Intenta registrar un nuevo jugador en la partida.
-     * @param j El jugador a agregar
-     * @return true si se agregó, false si la sala está llena o el juego ya empezó
-     */
     public synchronized boolean registrarJugador(Jugador j) {
-        // Validamos usando la lógica de la Sala (según documento)
         if (infoSala.hayEspacio() && !juegoIniciado) {
-            // Agregamos tanto a la lista local como al objeto Sala
             jugadores.add(j);
             infoSala.agregarJugador(j);
+            
+            // Asignar colores en orden de llegada
+            String[] cols = {"AMARILLO", "AZUL", "ROJO", "VERDE"};
+            if (jugadores.size() <= 4) {
+                j.setColor(cols[jugadores.size()-1]);
+            }
             
             setUltimoMensaje("Jugador conectado: " + j.getNombre());
             notificarCambio("NUEVO_JUGADOR", j);
@@ -57,66 +51,32 @@ public class Pizarra extends Observable {
         return false;
     }
     
-    /**
-     * Cambia el estado del juego. Si inicia, prepara el tablero.
-     */
     public void setJuegoIniciado(boolean iniciado) {
         this.juegoIniciado = iniciado;
-        this.infoSala.setEnJuego(iniciado); // Actualizamos estado de la sala
+        this.infoSala.setEnJuego(iniciado);
         
         if (iniciado) {
-            // Paso crucial: Crear las fichas para los jugadores conectados
             this.tablero.inicializarFichas(this.jugadores);
             setUltimoMensaje("¡La partida ha comenzado!");
         }
         notificarCambio("ESTADO_JUEGO", iniciado ? "INICIADO" : "ESPERA");
     }
 
-    /**
-     * Actualiza un mensaje global (ej. chat o logs del sistema)
-     */
     public void setUltimoMensaje(String msg) {
         this.ultimoMensaje = msg;
-        // Notificamos solo como evento de texto
         notificarCambio("LOG", msg); 
     }
 
-    /**
-     * Método auxiliar para avisar a los observadores (Control y Clientes)
-     * Envía un array de String: [TIPO_EVENTO, DATO]
-     */
     public void notificarCambio(String tipo, Object dato) {
-        setChanged(); // Marca que hubo un cambio importante
-        notifyObservers(new String[]{tipo, dato.toString()}); // Avisa a Control.java
+        setChanged();
+        notifyObservers(new String[]{tipo, dato.toString()});
     }
 
-    // --- MÉTODOS DE LECTURA Y GETTERS/SETTERS ---
-
-    public List<Jugador> getJugadores() {
-        return new ArrayList<>(jugadores); // Retorna copia para proteger la lista original
-    }
-
-    public Tablero getTablero() {
-        return tablero;
-    }
-
-    public boolean isJuegoIniciado() {
-        return juegoIniciado;
-    }
-
-    public String getUltimoMensaje() {
-        return ultimoMensaje;
-    }
-
-    public int getTurnoActualIndex() {
-        return turnoActualIndex;
-    }
-
-    public void setTurnoActualIndex(int turnoActualIndex) {
-        this.turnoActualIndex = turnoActualIndex;
-    }
-    
-    public Sala getInfoSala() {
-        return infoSala;
-    }
+    public List<Jugador> getJugadores() { return new ArrayList<>(jugadores); }
+    public Tablero getTablero() { return tablero; }
+    public boolean isJuegoIniciado() { return juegoIniciado; }
+    public String getUltimoMensaje() { return ultimoMensaje; }
+    public int getTurnoActualIndex() { return turnoActualIndex; }
+    public void setTurnoActualIndex(int turnoActualIndex) { this.turnoActualIndex = turnoActualIndex; }
+    public Sala getInfoSala() { return infoSala; }
 }

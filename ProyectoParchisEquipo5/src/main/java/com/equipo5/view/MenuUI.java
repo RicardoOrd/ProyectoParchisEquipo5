@@ -38,10 +38,8 @@ public class MenuUI extends JFrame {
             this.setVisible(false);
         });
 
-        // Botón 2: Unirse a Sala (AHORA FUNCIONAL)
         JButton btnUnirse = crearBotonEstilizado("Unirse a Sala");
         btnUnirse.addActionListener((ActionEvent e) -> {
-            // Abre la ventana de conexión
             new UnirseSalaUI(this).setVisible(true); 
             this.setVisible(false);
         });

@@ -6,14 +6,12 @@ import java.util.List;
 import java.util.Map;
 
 public class Tablero {
-    // Guardamos las fichas agrupadas por color para acceso rápido
     private Map<String, List<Ficha>> fichasPorJugador;
 
     public Tablero() {
         this.fichasPorJugador = new HashMap<>();
     }
 
-    // Inicializa el tablero creando 4 fichas para cada jugador registrado
     public void inicializarFichas(List<Jugador> jugadores) {
         fichasPorJugador.clear();
         
@@ -41,12 +39,10 @@ public class Tablero {
         System.out.println("Tablero inicializado con " + jugadores.size() + " equipos.");
     }
 
-    // Obtener todas las fichas de un color específico
     public List<Ficha> getFichasDelColor(String color) {
         return fichasPorJugador.getOrDefault(color, new ArrayList<>());
     }
     
-    // Obtener todas las fichas del tablero (útil para pintar la UI o verificar choques)
     public List<Ficha> getTodasLasFichas() {
         List<Ficha> todas = new ArrayList<>();
         for (List<Ficha> lista : fichasPorJugador.values()) {
@@ -55,9 +51,8 @@ public class Tablero {
         return todas;
     }
     
-    // Verifica si hay alguna ficha en una posición específica (para lógica de comer/bloqueo)
     public Ficha getFichaEnPosicion(int casillero) {
-        if (casillero <= 0) return null; // Ignorar bases
+        if (casillero <= 0) return null; 
         
         for (List<Ficha> lista : fichasPorJugador.values()) {
             for (Ficha f : lista) {

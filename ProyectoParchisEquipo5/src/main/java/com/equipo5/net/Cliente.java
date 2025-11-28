@@ -14,16 +14,21 @@ public class Cliente {
     private PrintWriter out;
     private BufferedReader in;
     
-    // Referencias a las pantallas para poder actualizarlas
     private LobbyUI lobbyView;
     private TableroUI tableroView;
     
+    @SuppressWarnings("unused")
     private String miNombre; 
 
-    // Constructor vacío, las vistas se asignan después según el flujo
     public Cliente() {}
 
-    public void setLobbyView(LobbyUI lobby) { this.lobbyView = lobby; }
+    public void setLobbyView(LobbyUI lobby) { 
+        this.lobbyView = lobby; 
+    }
+    
+    public void setTableroView(TableroUI tablero) { 
+        this.tableroView = tablero; 
+    }
 
     public void conectar(String host, int puerto, String nickname) {
         this.miNombre = nickname;
@@ -32,10 +37,8 @@ public class Cliente {
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-            // Hilo dedicado a escuchar mensajes del servidor
             new Thread(this::escucharServidor).start();
 
-            // Enviar mensaje de Login inicial
             enviar("{ \"type\": \"LOGIN\", \"name\": \"" + nickname + "\" }");
 
         } catch (IOException e) {
@@ -63,9 +66,8 @@ public class Cliente {
     private void procesarMensaje(String json) {
         System.out.println("Cliente recibe: " + json);
 
-        // --- 1. LÓGICA DE CHAT (LOBBY) ---
+        // chat
         if (json.contains("\"type\": \"CHAT\"")) {
-            // Parsing manual simple: { "type": "CHAT", "sender": "Ana", "msg": "Hola" }
             try {
                 String sender = json.split("\"sender\": \"")[1].split("\"")[0];
                 String msg = json.split("\"msg\": \"")[1].split("\"")[0];
@@ -78,33 +80,32 @@ public class Cliente {
             }
         }
         
-        // --- 2. INICIO DE JUEGO (TRANSICIÓN LOBBY -> TABLERO) ---
+        // inicio juego
         else if (json.contains("\"type\": \"START_GAME\"")) {
             SwingUtilities.invokeLater(() -> {
-                // Cerrar la ventana del Lobby
+                // Cerrar la ventana del Lobby si existe
                 if (lobbyView != null) {
                     lobbyView.dispose(); 
                 }
                 
-                // Abrir la ventana del Tablero
-                tableroView = new TableroUI();
-                // Pasamos la instancia actual de 'this' (Cliente) para no perder la conexión
+                if (tableroView == null) {
+                    tableroView = new TableroUI();
+                }
+                
                 tableroView.setClienteExistente(this); 
                 tableroView.setVisible(true);
             });
         }
         
-        // --- 3. MENSAJES DENTRO DEL JUEGO (TABLERO) ---
-        // Si ya estamos en la fase de tablero, delegamos el procesamiento a la UI del tablero
-        else if (tableroView != null) {
-            if (json.contains("UPDATE") || json.contains("DICE_RESULT") || json.contains("TURN") || json.contains("LOG")) {
-                tableroView.procesarMensajeJuego(json);
-            }
+        // --- mensajes dentro del juego
+        else if (tableroView != null && 
+                (json.contains("UPDATE") || json.contains("DICE_RESULT") || 
+                 json.contains("TURN") || json.contains("LOG"))) {
+            
+            tableroView.procesarMensajeJuego(json);
         }
         
-        // --- 4. BIENVENIDA / ERROR ---
         else if (json.contains("\"type\": \"WELCOME\"")) {
-            // Podrías guardar tu color aquí si el servidor lo manda
             if (lobbyView != null) {
                 SwingUtilities.invokeLater(() -> lobbyView.agregarMensajeChat("SISTEMA", "Te has unido a la sala."));
             }
