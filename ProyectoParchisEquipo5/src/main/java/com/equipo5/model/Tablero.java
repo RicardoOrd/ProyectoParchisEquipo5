@@ -14,29 +14,22 @@ public class Tablero {
 
     public void inicializarFichas(List<Jugador> jugadores) {
         fichasPorJugador.clear();
-        
-        // Colores predefinidos en orden de turno habitual
         String[] coloresDisponibles = {"AMARILLO", "AZUL", "ROJO", "VERDE"};
         
         int i = 0;
         for (Jugador jugador : jugadores) {
-            // Asignar color al jugador si no tiene
             if (jugador.getColor() == null && i < coloresDisponibles.length) {
                 jugador.setColor(coloresDisponibles[i]);
             }
-            
             String color = jugador.getColor();
             List<Ficha> misFichas = new ArrayList<>();
-            
-            // Crear las 4 fichas
             for (int f = 1; f <= 4; f++) {
                 misFichas.add(new Ficha(color, f));
             }
-            
             fichasPorJugador.put(color, misFichas);
             i++;
         }
-        System.out.println("Tablero inicializado con " + jugadores.size() + " equipos.");
+        System.out.println("Tablero inicializado.");
     }
 
     public List<Ficha> getFichasDelColor(String color) {
@@ -51,16 +44,28 @@ public class Tablero {
         return todas;
     }
     
-    public Ficha getFichaEnPosicion(int casillero) {
-        if (casillero <= 0) return null; 
+    public boolean tieneMovimientosPosibles(String color, int valorDado) {
+        // Optimización: Si el valor es 5, siempre se puede salir de casa (a menos que la salida esté bloqueada, que no implementamos aún)
+        // Si no es 5, solo se pueden mover fichas que NO estén en casa y NO estén en meta.
         
-        for (List<Ficha> lista : fichasPorJugador.values()) {
-            for (Ficha f : lista) {
-                if (f.getPosicion() == casillero && !f.isEnBase() && !f.isEnMeta()) {
-                    return f;
-                }
+        List<Ficha> fichas = getFichasDelColor(color);
+        for (Ficha f : fichas) {
+            if (esMovimientoValido(f, valorDado)) {
+                return true; 
             }
         }
-        return null;
+        return false;
     }
+
+    public boolean esMovimientoValido(Ficha f, int valorDado) {
+    if (f.isEnMeta()) return false; 
+
+    if (f.isEnBase()) {
+        // CAMBIO: Permitir salir con cualquier número (o al menos con >= 1)
+        // Antes era: return (valorDado == 5);
+        return true; 
+    } else {
+        return true;
+    }
+}
 }

@@ -28,15 +28,12 @@ public class CrearSalaUI extends JFrame {
         panel.setBackground(new Color(102, 0, 153)); // Morado
         panel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
 
-        // 1. Título
         JLabel lblTitulo = new JLabel("Configuración de Sala", SwingConstants.CENTER);
         lblTitulo.setFont(new Font("Arial", Font.BOLD, 22));
         lblTitulo.setForeground(Color.WHITE);
 
-        // 2. Nickname
         JPanel panelNombre = crearPanelCampo("Tu Nickname:", txtNickname = new JTextField());
 
-        // 3. Max Jugadores
         JPanel panelJugadores = new JPanel(new BorderLayout());
         panelJugadores.setOpaque(false);
         JLabel lblJugadores = new JLabel("Máximo de Jugadores:");
@@ -50,13 +47,11 @@ public class CrearSalaUI extends JFrame {
         panelJugadores.add(lblJugadores, BorderLayout.NORTH);
         panelJugadores.add(cbNumJugadores, BorderLayout.CENTER);
 
-        // 4. Privacidad
         chkPrivada = new JCheckBox("Sala Privada (Requiere Código)");
         chkPrivada.setOpaque(false);
         chkPrivada.setForeground(Color.WHITE);
         chkPrivada.setFont(new Font("Arial", Font.BOLD, 14));
 
-        // 5. Botones
         JButton btnIniciar = new JButton("CREAR SALA");
         btnIniciar.setBackground(new Color(0, 204, 102));
         btnIniciar.setForeground(Color.WHITE);
@@ -99,17 +94,20 @@ public class CrearSalaUI extends JFrame {
             return;
         }
 
-        // Obtener configuración
         int maxJugadores = Integer.parseInt(((String)cbNumJugadores.getSelectedItem()).split(" ")[0]);
         boolean esPublica = !chkPrivada.isSelected();
 
-        // 1. Iniciar Servidor con la configuración
+        // 1. Iniciar Servidor
         new Thread(() -> {
             new Servidor(5000, maxJugadores, esPublica).iniciar();
         }).start();
 
-        // 2. Abrir Lobby como Host
-        // Pasamos 'true' porque es el anfitrión
+        // --- CORRECCIÓN CRÍTICA: ESPERAR A QUE EL SERVIDOR ARRANQUE ---
+        try {
+            Thread.sleep(500); // Esperar 0.5 segundos para asegurar que el puerto 5000 esté abierto
+        } catch (InterruptedException ex) {}
+
+        // 2. Abrir Lobby
         LobbyUI lobby = new LobbyUI(true); 
         lobby.setVisible(true);
         

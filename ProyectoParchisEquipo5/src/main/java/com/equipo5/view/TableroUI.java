@@ -8,9 +8,10 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
-import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.swing.*;
 
 public class TableroUI extends javax.swing.JFrame {
@@ -20,28 +21,32 @@ public class TableroUI extends javax.swing.JFrame {
     private JButton btnLanzarDado;
     private JLabel lblDado;
     private JLabel lblTurno;
-    
+
     private Cliente clienteRed;
-    private Tablero modeloTablero; 
-    
-    // Coordenadas calculadas dinámicamente
-    private Point[] coordenadasCasillas = new Point[69]; 
+    private Tablero modeloTablero;
 
     public TableroUI() {
         initComponents();
-        this.modeloTablero = new Tablero(); 
-        
-        // Inicializar dummies para ver algo antes de conectar
+        this.modeloTablero = new Tablero();
+
+        // Inicialización visual dummy para pruebas
         List<Jugador> dummies = new ArrayList<>();
-        Jugador j1 = new Jugador("P1"); j1.setColor("AMARILLO"); dummies.add(j1);
-        Jugador j2 = new Jugador("P2"); j2.setColor("AZUL");     dummies.add(j2);
-        Jugador j3 = new Jugador("P3"); j3.setColor("ROJO");     dummies.add(j3);
-        Jugador j4 = new Jugador("P4"); j4.setColor("VERDE");    dummies.add(j4);
-        
+        Jugador j1 = new Jugador("P1");
+        j1.setColor("AMARILLO");
+        dummies.add(j1);
+        Jugador j2 = new Jugador("P2");
+        j2.setColor("AZUL");
+        dummies.add(j2);
+        Jugador j3 = new Jugador("P3");
+        j3.setColor("ROJO");
+        dummies.add(j3);
+        Jugador j4 = new Jugador("P4");
+        j4.setColor("VERDE");
+        dummies.add(j4);
+
         this.modeloTablero.inicializarFichas(dummies);
-        
-        // Forzar cálculo inicial de coordenadas
-        SwingUtilities.invokeLater(() -> panelTablero.calcularCoordenadas());
+        // Forzamos el repintado inicial
+        SwingUtilities.invokeLater(() -> panelTablero.repaint());
     }
 
     public void setClienteExistente(Cliente cliente) {
@@ -50,8 +55,8 @@ public class TableroUI extends javax.swing.JFrame {
     }
 
     public void iniciarCliente(String host, String nickname) {
-        this.clienteRed = new Cliente(); 
-        this.clienteRed.setTableroView(this); 
+        this.clienteRed = new Cliente();
+        this.clienteRed.setTableroView(this);
         this.clienteRed.conectar(host, 5000, nickname);
         this.setTitle("Parchís - Jugador: " + nickname);
     }
@@ -59,80 +64,89 @@ public class TableroUI extends javax.swing.JFrame {
     private void initComponents() {
         setTitle("Parchís - Equipo 5");
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setSize(1100, 750);
+        setSize(1200, 850);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // --- 1. Panel Central (Tablero) ---
         panelTablero = new PanelTablero();
-        
         panelTablero.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 verificarClicFicha(e.getX(), e.getY());
             }
         });
-        
         add(panelTablero, BorderLayout.CENTER);
 
-        // --- 2. Panel Lateral ---
+        // Panel Lateral
         JPanel panelLateral = new JPanel();
         panelLateral.setPreferredSize(new Dimension(300, 0));
         panelLateral.setLayout(new BoxLayout(panelLateral, BoxLayout.Y_AXIS));
-        panelLateral.setBackground(new Color(40, 40, 40)); 
+        panelLateral.setBackground(new Color(30, 30, 30));
         panelLateral.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         lblTurno = new JLabel("Esperando...");
         lblTurno.setForeground(Color.WHITE);
-        lblTurno.setFont(new Font("Arial", Font.BOLD, 18));
+        lblTurno.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblTurno.setAlignmentX(Component.CENTER_ALIGNMENT);
         panelLateral.add(lblTurno);
-        panelLateral.add(Box.createRigidArea(new Dimension(0, 30)));
+        panelLateral.add(Box.createRigidArea(new Dimension(0, 40)));
 
         lblDado = new JLabel("🎲");
-        lblDado.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 80));
-        lblDado.setForeground(Color.ORANGE);
+        lblDado.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 100));
+        lblDado.setForeground(Color.WHITE);
         lblDado.setAlignmentX(Component.CENTER_ALIGNMENT);
         panelLateral.add(lblDado);
-        panelLateral.add(Box.createRigidArea(new Dimension(0, 20)));
+        panelLateral.add(Box.createRigidArea(new Dimension(0, 30)));
 
         btnLanzarDado = new JButton("LANZAR DADO");
         btnLanzarDado.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btnLanzarDado.setBackground(new Color(0, 153, 255));
+        btnLanzarDado.setBackground(new Color(0, 120, 215));
         btnLanzarDado.setForeground(Color.WHITE);
-        btnLanzarDado.setFont(new Font("Arial", Font.BOLD, 16));
+        btnLanzarDado.setFont(new Font("Segoe UI", Font.BOLD, 18));
         btnLanzarDado.setFocusPainted(false);
+        btnLanzarDado.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnLanzarDado.addActionListener(e -> {
-            if (clienteRed != null) clienteRed.enviar("{ \"type\": \"ROLL\" }");
+            if (clienteRed != null) {
+                clienteRed.enviar("{ \"type\": \"ROLL\" }");
+            }
         });
-        
+
         panelLateral.add(btnLanzarDado);
-        panelLateral.add(Box.createRigidArea(new Dimension(0, 30)));
+        panelLateral.add(Box.createRigidArea(new Dimension(0, 40)));
 
         JLabel lblLog = new JLabel("Historial:");
         lblLog.setForeground(Color.LIGHT_GRAY);
+        lblLog.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         lblLog.setAlignmentX(Component.CENTER_ALIGNMENT);
         panelLateral.add(lblLog);
-        
+
         areaLog = new JTextArea();
         areaLog.setEditable(false);
         areaLog.setLineWrap(true);
-        areaLog.setBackground(new Color(60, 60, 60));
+        areaLog.setWrapStyleWord(true);
+        areaLog.setBackground(new Color(50, 50, 50));
         areaLog.setForeground(Color.WHITE);
+        areaLog.setFont(new Font("Consolas", Font.PLAIN, 12));
         JScrollPane scrollLog = new JScrollPane(areaLog);
-        scrollLog.setPreferredSize(new Dimension(240, 300));
+        scrollLog.setBorder(BorderFactory.createLineBorder(new Color(70, 70, 70)));
+        scrollLog.setPreferredSize(new Dimension(240, 400));
         panelLateral.add(scrollLog);
 
         add(panelLateral, BorderLayout.EAST);
     }
-    
+
     public void procesarMensajeJuego(String json) {
         if (json.contains("DICE_RESULT")) {
-             String valStr = json.split("\"value\": ")[1].split(" ")[0].replace("}", "").trim();
-             mostrarResultadoDado(Integer.parseInt(valStr));
-        }
-        else if (json.contains("UPDATE")) {
-             try {
+            String valStr = json.split("\"value\": ")[1].split(",")[0].replace("}", "").trim();
+            int valor = Integer.parseInt(valStr);
+            Color cDado = Color.WHITE;
+            if (json.contains("\"color\": \"")) {
+                String colStr = json.split("\"color\": \"")[1].split("\"")[0];
+                cDado = panelTablero.obtenerColorReal(colStr);
+            }
+            mostrarResultadoDado(valor, cDado);
+        } else if (json.contains("UPDATE")) {
+            try {
                 String data = json.split("\"board\": \"")[1].split("\"")[0];
                 String[] fichasStr = data.split(",");
                 for (String fStr : fichasStr) {
@@ -144,32 +158,40 @@ public class TableroUI extends javax.swing.JFrame {
                     actualizarFichaLocal(color, id, pos, enBase);
                 }
                 panelTablero.repaint();
-            } catch (Exception e) {}
-        }
-        else if (json.contains("LOG")) {
+            } catch (Exception e) {
+            }
+        } else if (json.contains("LOG")) {
             String msg = json.split("\"msg\": \"")[1].split("\"")[0];
             agregarLog(msg);
         }
-        else if (json.contains("TURN")) {
-             // Actualizar turno visualmente si se desea
-        }
-    }
-    
-    private void verificarClicFicha(int x, int y) {
-        if (modeloTablero == null || clienteRed == null) return;
-        
-        // Buscar ficha bajo el clic
-        for (Ficha f : modeloTablero.getTodasLasFichas()) {
-            Point p = panelTablero.obtenerCoordenadasFicha(f);
-            if (p.distance(x, y) < 25) { // Radio de clic
-                clienteRed.enviar("{ \"type\": \"MOVE\", \"ficha\": " + f.getId() + " }");
-                return; 
-            }
-        }
     }
 
+    private void verificarClicFicha(int x, int y) {
+    if (modeloTablero == null || clienteRed == null) return;
+    
+    // Iterar inversamente para detectar primero las que se dibujan arriba (opcional)
+    for (Ficha f : modeloTablero.getTodasLasFichas()) {
+        Point pBase = panelTablero.obtenerCoordenadasFicha(f);
+        
+        // IMPORTANTE: Debemos simular el offset aquí también o exponer el método calcularOffset
+        // Como calcularOffset es privado en PanelTablero, lo ideal es hacerlo público o 
+        // mover la lógica de detección dentro de PanelTablero.
+        
+        // Solución rápida: Acceder a una lógica aproximada o mover 'verificarClic' dentro de PanelTablero.
+        // Dado que no podemos cambiar todo, ampliemos el radio de detección.
+        
+        if (pBase != null && pBase.distance(x, y) < panelTablero.getCellSize() * 0.8) { 
+            // Radio aumentado a 0.8 para facilitar el clic
+            clienteRed.enviar("{ \"type\": \"MOVE\", \"ficha\": " + f.getId() + " }");
+            return; 
+        }
+    }
+}
+
     public void actualizarFichaLocal(String color, int id, int pos, boolean enBase) {
-        if (modeloTablero == null) return;
+        if (modeloTablero == null) {
+            return;
+        }
         for (Ficha f : modeloTablero.getTodasLasFichas()) {
             if (f.getColor().equals(color) && f.getId() == id) {
                 f.setPosicion(pos);
@@ -184,99 +206,110 @@ public class TableroUI extends javax.swing.JFrame {
         areaLog.setCaretPosition(areaLog.getDocument().getLength());
     }
 
-    public void mostrarResultadoDado(int valor) {
+    public void mostrarResultadoDado(int valor, Color color) {
         lblDado.setText("🎲 " + valor);
+        lblDado.setForeground(color);
     }
 
     // =================================================================================
-    // CLASE INTERNA: DIBUJO DEL TABLERO
+    // CLASE INTERNA: DIBUJO GEOMÉTRICO 19x19 (GRID SYSTEM) - ORIGINAL Y RECTO
     // =================================================================================
     private class PanelTablero extends JPanel {
-        
-        // Constantes de colores
+
         private final Color C_AMARILLO = new Color(255, 215, 0);
         private final Color C_ROJO = new Color(220, 20, 60);
         private final Color C_VERDE = new Color(34, 139, 34);
         private final Color C_AZUL = new Color(30, 144, 255);
-        
-        private int cx, cy; // Centro
-        private int size;   // Tamaño celda base
+        private final Color C_FONDO = new Color(245, 230, 210);
+        private final Color C_CAMINO = Color.WHITE;
+        private final Color C_BORDE = new Color(50, 50, 50);
+        private final Color C_SEGURO = new Color(200, 200, 200);
+
+        private int cx, cy;
+        private int cellSize;
+
+        // Mapeo EXACTO: Índice 1-68 -> Point(x,y)
+        private Map<Integer, Point> mapaCasillas = new HashMap<>();
+        private Map<String, Point> mapaBases = new HashMap<>();
 
         public PanelTablero() {
-            setBackground(new Color(245, 230, 210)); // Color madera fondo
-        }
-        
-        // Método crítico: Calcular dónde va cada casilla (1-68) geométricamente
-        public void calcularCoordenadas() {
-            int w = getWidth();
-            int h = getHeight();
-            cx = w / 2;
-            cy = h / 2;
-            
-            // Tamaño relativo de una "casilla"
-            size = Math.min(w, h) / 15; 
-            
-            // Lógica simple para mapear el recorrido rectangular del parchís
-            // Este es un mapeo aproximado para dibujar las fichas sobre el dibujo
-            // Se asume un recorrido antihorario empezando a la derecha
-            
-            // NOTA: Implementación completa de mapeo requeriría 68 "if" o lógica vectorial compleja
-            // Usaremos una aproximación circular ajustada para que "aparezca" algo jugable
-            
-            int radio = (int)(size * 5.5);
-            for (int i = 1; i <= 68; i++) {
-                double angle = Math.toRadians((i - 1) * (360.0 / 68.0)); 
-                coordenadasCasillas[i] = new Point(
-                    cx + (int)(radio * Math.cos(angle)),
-                    cy + (int)(radio * Math.sin(angle))
-                );
-            }
+            setBackground(C_FONDO);
         }
 
-        @Override
+        public int getCellSize() {
+            return cellSize;
+        }
+
+        // Convierte coordenadas de grid (0-18) a pixeles
+        private Point gridToPixel(int gx, int gy) {
+            // El tablero es 19x19. gx, gy van de 0 a 18.
+            // Centramos el tablero en el panel
+            int boardSize = cellSize * 19;
+            int startX = cx - boardSize / 2;
+            int startY = cy - boardSize / 2;
+
+            return new Point(
+                    startX + gx * cellSize,
+                    startY + gy * cellSize
+            );
+        }
+
+@Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-            calcularCoordenadas(); // Recalcular si redimensiona
-            
             Graphics2D g2 = (Graphics2D) g;
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setStroke(new BasicStroke(1.5f));
 
-            // 1. DIBUJAR BASES (Cuadrados grandes)
-            int baseSize = size * 4;
-            // Amarillo (Abajo-Der)
-            dibujarBase(g2, C_AMARILLO, getWidth() - baseSize - 20, getHeight() - baseSize - 20, baseSize);
-            // Rojo (Arriba-Der) -> Ojo: En parchís clásico suele ser Rojo Abajo-Der, Amarillo Abajo-Izq, pero depende versión
-            // Usaremos: Rojo (Der-Abajo), Verde (Izq-Abajo), Azul (Izq-Arriba), Amarillo (Der-Arriba)
+            int w = getWidth();
+            int h = getHeight();
+            int minDim = Math.min(w, h);
             
-            // Ajustamos posiciones estándar
-            dibujarBase(g2, C_AMARILLO, getWidth() - baseSize - 20, 20, baseSize); // Arriba Der
-            dibujarBase(g2, C_AZUL, 20, 20, baseSize); // Arriba Izq
-            dibujarBase(g2, C_VERDE, 20, getHeight() - baseSize - 20, baseSize); // Abajo Izq
-            dibujarBase(g2, C_ROJO, getWidth() - baseSize - 20, getHeight() - baseSize - 20, baseSize); // Abajo Der
+            cx = w / 2;
+            cy = h / 2;
+            cellSize = (minDim - 40) / 19; 
+            
+            mapaCasillas.clear();
+            mapaBases.clear();
 
-            // 2. DIBUJAR CAMINOS (Cruces)
-            g2.setColor(Color.LIGHT_GRAY);
-            // Horizontal
-            g2.fillRect(0, cy - size, getWidth(), size * 2);
-            // Vertical
-            g2.fillRect(cx - size, 0, size * 2, getHeight());
+            // 1. DIBUJAR BRAZOS (Pista externa)
+            drawHorizontalArm(g2, 0, 7, C_ROJO, 35, 42, 27, 34);      // Izquierda
+            drawHorizontalArm(g2, 11, 18, C_AMARILLO, 1, 8, 61, 68);  // Derecha
+            drawVerticalArm(g2, 0, 7, C_AZUL, 18, 25, 10, 17);        // Arriba
+            drawVerticalArm(g2, 11, 18, C_VERDE, 52, 59, 44, 51);     // Abajo
             
-            // 3. DIBUJAR META (Triángulos centrales)
-            g2.setColor(C_AMARILLO);
-            g2.fillPolygon(new int[]{cx, cx+size*2, cx+size*2}, new int[]{cy, cy-size, cy+size}, 3);
+            // 2. REGISTRAR PASILLOS (Camino a meta)
+            // Amarillo (Derecha): ID 101-107. Fila 9. Col 17 hacia 11.
+            for(int i=0; i<7; i++) registerCell(101+i, 17-i, 9);
             
-            // Dibujar círculo central
-            g2.setColor(Color.WHITE);
-            g2.fillOval(cx - size*2, cy - size*2, size*4, size*4);
-            g2.setColor(Color.BLACK);
-            g2.drawOval(cx - size*2, cy - size*2, size*4, size*4);
+            // Azul (Arriba): ID 201-207. Col 9. Fila 1 hacia 7.
+            for(int i=0; i<7; i++) registerCell(201+i, 9, 1+i);
+            
+            // Rojo (Izquierda): ID 301-307. Fila 9. Col 1 hacia 7.
+            for(int i=0; i<7; i++) registerCell(301+i, 1+i, 9);
+            
+            // Verde (Abajo): ID 401-407. Col 9. Fila 17 hacia 11.
+            for(int i=0; i<7; i++) registerCell(401+i, 9, 17-i);
 
-            // 4. DIBUJAR CASILLAS (Para visualización)
-            g2.setColor(Color.GRAY);
-            for(int i=1; i<=68; i++) {
-                Point p = coordenadasCasillas[i];
-                if(p != null) g2.drawRect(p.x-5, p.y-5, 10, 10);
-            }
+            // 3. CENTRO Y BASES
+            drawCenter(g2);
+            drawBase(g2, 0, 0, C_ROJO);
+            drawBase(g2, 13, 0, C_AZUL);
+            drawBase(g2, 0, 13, C_VERDE);
+            drawBase(g2, 13, 13, C_AMARILLO);
+            
+            // 4. CORRECCIÓN DE ESQUINAS (Antes estaban en el interior 11,7 etc.)
+            // Ahora las ponemos en los extremos reales del tablero
+            registerCell(9, 18, 0);  // Esquina Sup-Der (Paso de Amarillo a Azul)
+            registerCell(26, 0, 0);  // Esquina Sup-Izq (Paso de Azul a Rojo)
+            registerCell(43, 0, 18); // Esquina Inf-Izq (Paso de Rojo a Verde)
+            registerCell(60, 18, 18); // Esquina Inf-Der (Paso de Verde a Amarillo)
+            
+            // Dibujamos las esquinas visualmente
+            drawSingleCell(g2, 18, 0, Color.WHITE);
+            drawSingleCell(g2, 0, 0, Color.WHITE);
+            drawSingleCell(g2, 0, 18, Color.WHITE);
+            drawSingleCell(g2, 18, 18, Color.WHITE);
 
             // 5. DIBUJAR FICHAS
             if (modeloTablero != null) {
@@ -286,74 +319,330 @@ public class TableroUI extends javax.swing.JFrame {
             }
         }
 
-        private void dibujarBase(Graphics2D g, Color c, int x, int y, int s) {
+        private void drawHorizontalArm(Graphics2D g, int startCol, int endCol, Color teamColor,
+                int idxStartOut, int idxEndOut, int idxStartIn, int idxEndIn) {
+            // Fila Superior (8): Entrada o Salida según lado
+            // Fila Media (9): Pasillo Color
+            // Fila Inferior (10): Salida o Entrada según lado
+
+            // ROJO (Izquierda 0-7): 
+            // Fila 8 (Arriba): Entrada (34..27) -> Col 7..0
+            // Fila 9: Pasillo
+            // Fila 10 (Abajo): Salida (35..42) -> Col 7..0
+            // AMARILLO (Derecha 11-18):
+            // Fila 8 (Arriba): Entrada (68..61) -> Col 11..18
+            // Fila 9: Pasillo
+            // Fila 10 (Abajo): Salida (1..8) -> Col 11..18
+            boolean isLeft = (startCol == 0);
+
+            for (int col = startCol; col <= endCol; col++) {
+                // Fila 8
+                int idxTop = isLeft ? (idxEndIn - (7 - col)) : (idxEndIn - (col - 11));
+                // Fix indices Rojo: 27..34. Col 0->34? No. Col 7->34 (cerca centro). Col 0->27.
+                // Rojo Fila 8 (In): Col 0(27) -> Col 7(34)
+                if (isLeft) {
+                    idxTop = idxStartIn + col;
+                }
+
+                Color cTop = C_CAMINO;
+                if (isLeft && col == 2) {
+                    cTop = C_SEGURO; // Seguro Rojo
+                }
+                if (!isLeft && col == 16) {
+                    cTop = C_SEGURO; // Seguro Amarillo Entrada (66)? No 63.
+                }                // 61(18)..68(11). 63 is at col 16? 68-11=57. 63 is 68-5. 
+                // Let's rely on standard positions: 5th cell from end.
+
+                drawSingleCell(g, col, 8, cTop);
+                if (isLeft) {
+                    registerCell(idxTop, col, 8);
+                } else {
+                    registerCell(idxTop, col, 8); // Need Logic mapping
+                }
+                // Fila 9 (Pasillo)
+                drawSingleCell(g, col, 9, (isLeft && col == 0) || (!isLeft && col == 18) ? C_CAMINO : teamColor);
+
+                // Fila 10
+                int idxBot = isLeft ? (idxStartOut + (7 - col)) : (idxStartOut + (col - 11));
+                // Rojo Out: 35(Col 7)..42(Col 0).
+                Color cBot = C_CAMINO;
+                if (isLeft && col == 7) {
+                    cBot = C_SEGURO; // Rojo Salida
+                }
+                if (!isLeft && col == 11) {
+                    cBot = C_SEGURO; // Amarillo Salida (5? no 1)
+                }                // Amarillo Salida es 5. 1 es col 11. 5 es col 15.
+                if (!isLeft && col == 15) {
+                    cBot = C_SEGURO;
+                }
+
+                drawSingleCell(g, col, 10, cBot);
+                registerCell(idxBot, col, 10);
+            }
+
+            // RE-MAPEO MANUAL PARA PRECISIÓN (Sobreescribe loop anterior)
+            if (isLeft) { // ROJO
+                // Out (35-42): Fila 10, Col 7->0
+                for (int i = 0; i < 8; i++) {
+                    registerCell(35 + i, 7 - i, 10);
+                }
+                // In (27-34): Fila 8, Col 0->7
+                for (int i = 0; i < 8; i++) {
+                    registerCell(27 + i, i, 8);
+                }
+
+            } else { // AMARILLO
+                // Out (1-8): Fila 10, Col 11->18
+                for (int i = 0; i < 8; i++) {
+                    registerCell(1 + i, 11 + i, 10);
+                }
+                // In (61-68): Fila 8, Col 18->11
+                for (int i = 0; i < 8; i++) {
+                    registerCell(61 + i, 18 - i, 8);
+                }
+            }
+        }
+
+        private void drawVerticalArm(Graphics2D g, int startRow, int endRow, Color teamColor,
+                int idxStartOut, int idxEndOut, int idxStartIn, int idxEndIn) {
+            // AZUL (Arriba 0-7):
+            // Col 8: Salida (18..25) -> Row 7..0
+            // Col 9: Pasillo
+            // Col 10: Entrada (10..17) -> Row 0..7
+
+            // VERDE (Abajo 11-18):
+            // Col 8: Entrada (44..51) -> Row 18..11
+            // Col 9: Pasillo
+            // Col 10: Salida (52..59) -> Row 11..18
+            boolean isTop = (startRow == 0);
+
+            for (int row = startRow; row <= endRow; row++) {
+                // Col 8
+                drawSingleCell(g, 8, row, C_CAMINO);
+                // Col 9
+                drawSingleCell(g, 9, row, (isTop && row == 0) || (!isTop && row == 18) ? C_CAMINO : teamColor);
+                // Col 10
+                drawSingleCell(g, 10, row, C_CAMINO);
+            }
+
+            // SEGUROS MANUALES
+            if (isTop) {
+                drawSingleCell(g, 10, 4, C_SEGURO); // Azul Salida (22)
+                drawSingleCell(g, 8, 4, C_SEGURO); // 12
+            } else {
+                drawSingleCell(g, 10, 14, C_SEGURO); // Verde Salida (56)
+                drawSingleCell(g, 8, 14, C_SEGURO); // 46
+            }
+
+            // MAPEO
+            if (isTop) { // AZUL
+                // Out (18-25): Col 8, Row 7->0
+                for (int i = 0; i < 8; i++) {
+                    registerCell(18 + i, 8, 7 - i);
+                }
+                // In (10-17): Col 10, Row 0->7
+                for (int i = 0; i < 8; i++) {
+                    registerCell(10 + i, 10, i);
+                }
+            } else { // VERDE
+                // Out (52-59): Col 10, Row 11->18
+                for (int i = 0; i < 8; i++) {
+                    registerCell(52 + i, 10, 11 + i);
+                }
+                // In (44-51): Col 8, Row 18->11
+                for (int i = 0; i < 8; i++) {
+                    registerCell(44 + i, 8, 18 - i);
+                }
+            }
+        }
+
+        private void drawSingleCell(Graphics2D g, int gx, int gy, Color c) {
+            Point p = gridToPixel(gx, gy);
             g.setColor(c);
-            g.fillRect(x, y, s, s);
-            g.setColor(Color.BLACK);
+            g.fillRect(p.x, p.y, cellSize, cellSize);
+            g.setColor(C_BORDE);
+            g.drawRect(p.x, p.y, cellSize, cellSize);
+        }
+
+        private void registerCell(int idx, int gx, int gy) {
+            Point p = gridToPixel(gx, gy);
+            // Guardar centro
+            mapaCasillas.put(idx, new Point(p.x + cellSize / 2, p.y + cellSize / 2));
+        }
+
+        private void drawBase(Graphics2D g, int gx, int gy, Color c) {
+            // Base ocupa 6x6 celdas
+            Point p = gridToPixel(gx, gy);
+            int size = cellSize * 6;
+
+            g.setColor(c);
+            g.fillRoundRect(p.x, p.y, size, size, 20, 20);
+            g.setColor(C_BORDE);
             g.setStroke(new BasicStroke(3));
-            g.drawRect(x, y, s, s);
-            
-            // Círculo blanco interno
+            g.drawRoundRect(p.x, p.y, size, size, 20, 20);
+
+            // Círculo blanco
+            int innerSize = (int) (size * 0.7);
+            int offset = (size - innerSize) / 2;
             g.setColor(Color.WHITE);
-            g.fillOval(x + s/4, y + s/4, s/2, s/2);
+            g.fillOval(p.x + offset, p.y + offset, innerSize, innerSize);
+            g.setColor(C_BORDE);
+            g.setStroke(new BasicStroke(1));
+            g.drawOval(p.x + offset, p.y + offset, innerSize, innerSize);
+
+            // Guardar centro base
+            String k = "";
+            if (c == C_ROJO) {
+                k = "ROJO";
+            } else if (c == C_AZUL) {
+                k = "AZUL";
+            } else if (c == C_VERDE) {
+                k = "VERDE";
+            } else {
+                k = "AMARILLO";
+            }
+            mapaBases.put(k, new Point(p.x + size / 2, p.y + size / 2));
+        }
+
+        private void drawCenter(Graphics2D g) {
+            Point pCenter = gridToPixel(9, 9);
+            int cx = pCenter.x + cellSize / 2; // True center pixel
+            int cy = pCenter.y + cellSize / 2;
+            int half = (int) (cellSize * 1.5);
+
+            // Area central es 3x3 celdas -> 8,8 a 10,10
+            // Triangulos
+            drawTri(g, cx, cy, half, 0, C_AMARILLO);
+            drawTri(g, cx, cy, half, 90, C_VERDE);
+            drawTri(g, cx, cy, half, 180, C_ROJO);
+            drawTri(g, cx, cy, half, 270, C_AZUL);
+        }
+
+        private void drawTri(Graphics2D g, int cx, int cy, int size, int angle, Color c) {
+            AffineTransform old = g.getTransform();
+            g.rotate(Math.toRadians(angle), cx, cy);
+            g.setColor(c);
+            // Triangulo apuntando derecha
+            int[] x = {cx, cx + size, cx + size};
+            int[] y = {cy, cy - size, cy + size};
+            g.fillPolygon(x, y, 3);
+            g.setColor(C_BORDE);
+            g.drawPolygon(x, y, 3);
+            g.setTransform(old);
         }
 
         private void dibujarFicha(Graphics2D g, Ficha f) {
             Point p = obtenerCoordenadasFicha(f);
+            if (p == null) {
+                return;
+            }
+
+            // NUEVO: Calcular desplazamiento si hay varias fichas en la misma casilla
+            Point offset = calcularOffset(f);
+            int xReal = p.x + offset.x;
+            int yReal = p.y + offset.y;
+
             Color c = obtenerColorReal(f.getColor());
-            
-            int fichaSize = 28;
-            
+            // Hacemos la ficha un poco más pequeña para que quepan mejor
+            int fSize = (int) (cellSize * 0.6);
+
             // Sombra
-            g.setColor(new Color(0,0,0,80));
-            g.fillOval(p.x + 3, p.y + 3, fichaSize, fichaSize);
-            
-            // Cuerpo
+            g.setColor(new Color(0, 0, 0, 60));
+            g.fillOval(xReal - fSize / 2 + 2, yReal - fSize / 2 + 2, fSize, fSize);
+
+            // Ficha
             g.setColor(c);
-            g.fillOval(p.x, p.y, fichaSize, fichaSize);
-            
-            // Borde
+            g.fillOval(xReal - fSize / 2, yReal - fSize / 2, fSize, fSize);
+
+            // Borde blanco para distinguir
             g.setColor(Color.WHITE);
-            g.setStroke(new BasicStroke(2));
-            g.drawOval(p.x, p.y, fichaSize, fichaSize);
-            
+            g.setStroke(new BasicStroke(1.5f));
+            g.drawOval(xReal - fSize / 2, yReal - fSize / 2, fSize, fSize);
+
             // Número ID
-            g.setColor(Color.WHITE);
-            g.setFont(new Font("Arial", Font.BOLD, 12));
-            g.drawString(String.valueOf(f.getId()), p.x + 10, p.y + 19);
+            g.setFont(new Font("Segoe UI", Font.BOLD, 10));
+            String txt = String.valueOf(f.getId());
+            FontMetrics fm = g.getFontMetrics();
+            g.drawString(txt, xReal - fm.stringWidth(txt) / 2, yReal + fm.getAscent() / 2 - 2);
         }
-        
-        // Calcula posición visual final (Bases o Tablero)
-        public Point obtenerCoordenadasFicha(Ficha f) {
-            if (f.isEnBase()) {
-                int baseSize = size * 4;
-                int offsetX = (f.getId() % 2 == 0) ? 20 : -20;
-                int offsetY = (f.getId() > 2) ? 20 : -20;
-                
-                // Centros aproximados de las bases
-                switch (f.getColor()) {
-                    case "AZUL": return new Point(20 + baseSize/2 + offsetX, 20 + baseSize/2 + offsetY);
-                    case "AMARILLO": return new Point(getWidth() - 20 - baseSize/2 + offsetX, 20 + baseSize/2 + offsetY);
-                    case "VERDE": return new Point(20 + baseSize/2 + offsetX, getHeight() - 20 - baseSize/2 + offsetY);
-                    case "ROJO": return new Point(getWidth() - 20 - baseSize/2 + offsetX, getHeight() - 20 - baseSize/2 + offsetY);
+
+// NUEVO MÉTODO PARA EVITAR SUPERPOSICIÓN
+        private Point calcularOffset(Ficha fActual) {
+            int cantidadEnMismaCasilla = 0;
+            int indiceEnGrupo = 0;
+
+            // Contar cuántas fichas hay en la misma posición que fActual
+            for (Ficha otra : modeloTablero.getTodasLasFichas()) {
+                boolean mismaPos = false;
+                if (fActual.isEnBase() && otra.isEnBase() && fActual.getColor().equals(otra.getColor())) {
+                    // En base, no aplicamos offset porque ya tienen posiciones fijas en el dibujo base
+                    return new Point(0, 0);
+                } else if (!fActual.isEnBase() && !otra.isEnBase() && fActual.getPosicion() == otra.getPosicion()) {
+                    mismaPos = true;
                 }
-            } else {
-                int pos = f.getPosicion();
-                if (pos >= 1 && pos <= 68 && coordenadasCasillas[pos] != null) {
-                    return coordenadasCasillas[pos];
+
+                if (mismaPos) {
+                    if (otra.equals(fActual)) {
+                        indiceEnGrupo = cantidadEnMismaCasilla;
+                    }
+                    cantidadEnMismaCasilla++;
                 }
             }
-            return new Point(cx, cy); // Fallback al centro
+
+            if (cantidadEnMismaCasilla <= 1) {
+                return new Point(0, 0);
+            }
+
+            // Calcular desplazamiento pequeño (ej. 5 pixeles)
+            int gap = 6;
+            // Distribución simple: izquierda, derecha, arriba, abajo según el índice
+            switch (indiceEnGrupo) {
+                case 0:
+                    return new Point(-gap, -gap);
+                case 1:
+                    return new Point(gap, gap);
+                case 2:
+                    return new Point(-gap, gap);
+                case 3:
+                    return new Point(gap, -gap);
+                default:
+                    return new Point(0, 0);
+            }
         }
-        
-        private Color obtenerColorReal(String c) {
-            if (c == null) return Color.GRAY;
+
+        public Point obtenerCoordenadasFicha(Ficha f) {
+            if (f.isEnBase()) {
+                Point baseCenter = mapaBases.get(f.getColor());
+                if (baseCenter == null) {
+                    return new Point(cx, cy);
+                }
+                int gap = (int) (cellSize * 1.2);
+                int dx = (f.getId() % 2 == 0) ? 1 : -1;
+                int dy = (f.getId() > 2) ? 1 : -1;
+                return new Point(baseCenter.x + (dx * gap / 2), baseCenter.y + (dy * gap / 2));
+            } else {
+                if (mapaCasillas.containsKey(f.getPosicion())) {
+                    return mapaCasillas.get(f.getPosicion());
+                }
+            }
+            return new Point(cx, cy);
+        }
+
+        public Color obtenerColorReal(String c) {
+            if (c == null) {
+                return Color.GRAY;
+            }
             switch (c) {
-                case "ROJO": return C_ROJO;
-                case "VERDE": return C_VERDE;
-                case "AZUL": return C_AZUL;
-                case "AMARILLO": return C_AMARILLO;
-                default: return Color.GRAY;
+                case "ROJO":
+                    return C_ROJO;
+                case "VERDE":
+                    return C_VERDE;
+                case "AZUL":
+                    return C_AZUL;
+                case "AMARILLO":
+                    return C_AMARILLO;
+                default:
+                    return Color.GRAY;
             }
         }
     }

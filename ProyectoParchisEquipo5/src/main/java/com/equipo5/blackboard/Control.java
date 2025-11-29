@@ -1,35 +1,30 @@
 package com.equipo5.blackboard;
 
-import com.equipo5.model.Dado;
 import com.equipo5.model.Ficha;
 import com.equipo5.model.Jugador;
 import com.equipo5.net.Servidor;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.concurrent.ThreadLocalRandom; 
 
 public class Control implements Observer {
     
     private Pizarra pizarra;
     private Servidor servidor;
-    private Dado dado;
     
     private int ultimoValorDado = 0; 
     private boolean dadoLanzadoEnEsteTurno = false;
     private int contadorSeisesTurno = 0;
 
-    // Casillas seguras (Seguros) donde no se puede comer
-    private final int[] SEGUROS = {1, 5, 12, 17, 22, 29, 34, 39, 46, 51, 56, 63, 68};
-
     public Control(Pizarra pizarra, Servidor servidor) {
         this.pizarra = pizarra;
         this.servidor = servidor;
-        this.dado = new Dado();
         this.pizarra.addObserver(this);
     }
     
     public void iniciarCiclo() {
-        System.out.println("Control: Sistema listo esperando inicio de partida.");
+        System.out.println("Control: Esperando inicio...");
     }
     
     public void iniciarPrimerTurno() {
@@ -56,21 +51,23 @@ public class Control implements Observer {
 
     private void handleLanzarDado(String nombreJugador) {
         if (!esTurnoDe(nombreJugador)) return;
+        
         if (dadoLanzadoEnEsteTurno) {
-            servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"Ya lanzaste. Debes mover ficha.\" }");
+            servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡Ya lanzaste! Debes mover ficha.\" }");
             return;
         }
 
-        int valor = dado.tirar();
+        int valor = ThreadLocalRandom.current().nextInt(1, 7); 
         this.ultimoValorDado = valor;
         this.dadoLanzadoEnEsteTurno = true;
         
-        servidor.broadcast("{ \"type\": \"DICE_RESULT\", \"value\": " + valor + " }");
+        Jugador actual = pizarra.getJugadores().get(pizarra.getTurnoActualIndex());
+        servidor.broadcast("{ \"type\": \"DICE_RESULT\", \"value\": " + valor + ", \"color\": \"" + actual.getColor() + "\" }");
         
         if (valor == 6) {
             contadorSeisesTurno++;
             if (contadorSeisesTurno == 3) {
-                servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡TRES SEISES! Pierdes turno y ficha vuelve a casa.\" }");
+                servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡Tres 6 seguidos! Pierdes turno y ficha a casa.\" }");
                 aplicarPenalizacionTresSeises();
                 cambiarTurno();
                 return;
@@ -80,82 +77,90 @@ public class Control implements Observer {
         }
         
         servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"Resultado: " + valor + ".\" }");
+
+        boolean puedeMover = pizarra.getTablero().tieneMovimientosPosibles(actual.getColor(), valor);
+
+        if (!puedeMover) {
+            servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"No tienes movimientos posibles con un " + valor + ".\" }");
+            try { Thread.sleep(1500); } catch (Exception e) {}
+
+            if (valor == 6) {
+                dadoLanzadoEnEsteTurno = false;
+                servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡Pero sacaste 6! Tiras de nuevo.\" }");
+            } else {
+                cambiarTurno();
+            }
+        }
     }
 
-    private void handleMoverFicha(String idFichaStr) {
-        if (!dadoLanzadoEnEsteTurno) {
-             servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡Debes lanzar el dado primero!\" }");
-             return;
-        }
+  private void handleMoverFicha(String idFichaStr) {
+    if (!dadoLanzadoEnEsteTurno) {
+        servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡Tira el dado primero!\" }");
+        return;
+    }
 
-        try {
-            int idFicha = Integer.parseInt(idFichaStr);
-            Jugador actual = pizarra.getJugadores().get(pizarra.getTurnoActualIndex());
-            Ficha ficha = null;
-            
-            for (Ficha f : pizarra.getTablero().getFichasDelColor(actual.getColor())) {
-                if (f.getId() == idFicha) { ficha = f; break; }
-            }
-            
-            if (ficha != null) {
-                boolean movio = false;
+    try {
+        int idFicha = Integer.parseInt(idFichaStr);
+        Jugador actual = pizarra.getJugadores().get(pizarra.getTurnoActualIndex());
+        Ficha ficha = null;
+        
+        // Buscar la ficha que corresponde al ID recibido
+        for (Ficha f : pizarra.getTablero().getFichasDelColor(actual.getColor())) {
+            if (f.getId() == idFicha) { ficha = f; break; }
+        }
+        
+        if (ficha != null) {
+            // Se asume que en Tablero.java ya cambiaste esMovimientoValido para que retorne true al salir de base
+            if (pizarra.getTablero().esMovimientoValido(ficha, ultimoValorDado)) {
                 
                 if (ficha.isEnBase()) {
-                    if (ultimoValorDado == 5) {
-                        ficha.setEnBase(false);
-                        // Calcular casilla de salida según color
-                        ficha.setPosicion(obtenerSalidaPorColor(actual.getColor()));
-                        movio = true;
-                        servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡Ficha sale de casa!\" }");
-                    } else {
-                        servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"Necesitas un 5 para salir.\" }");
-                    }
+                    // Lógica para sacar la ficha de la base
+                    ficha.setEnBase(false);
+                    ficha.setPosicion(obtenerSalidaPorColor(actual.getColor()));
+                    // Mensaje actualizado para reflejar la salida exitosa sin mencionar el 5
+                    servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡Ficha sale a la casilla de salida!\" }");
                 } else {
+                    // Lógica normal de movimiento
                     ficha.avanzar(ultimoValorDado);
-                    movio = true;
-                }
-
-                if (movio) {
-                    // --- NUEVO: VERIFICAR SI COMEMOS ALGUIEN ---
                     verificarColision(ficha);
-                    
-                    enviarEstadoTablero();
-                    
-                    if (ultimoValorDado == 6) {
-                        dadoLanzadoEnEsteTurno = false;
-                        servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡Sacaste 6! Tiras de nuevo.\" }");
-                    } else {
-                        cambiarTurno();
-                    }
                 }
-            }
-        } catch (Exception e) { e.printStackTrace(); }
-    }
-    
-    // --- LÓGICA DE COMER FICHAS ---
-    private void verificarColision(Ficha fichaMoviendo) {
-        if (esSeguro(fichaMoviendo.getPosicion())) return; // No se come en seguros
 
-        for (Ficha otra : pizarra.getTablero().getTodasLasFichas()) {
-            // Si está en la misma posición, no es la misma ficha y es de otro color
-            if (!otra.isEnBase() && 
-                otra.getPosicion() == fichaMoviendo.getPosicion() && 
-                !otra.getColor().equals(fichaMoviendo.getColor())) {
+                enviarEstadoTablero();
                 
-                // COMER: La otra ficha vuelve a base
-                otra.regresarABase();
-                servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡" + fichaMoviendo.getColor() + " se comió a " + otra.getColor() + "!\" }");
+                // Si saca 6, repite turno; si no, cambia
+                if (ultimoValorDado == 6) {
+                    dadoLanzadoEnEsteTurno = false; 
+                    servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡6! Repites turno.\" }");
+                } else {
+                    cambiarTurno();
+                }
                 
-                // Premio por comer: contar 20 (Simplificado: dar tiro extra o mover 20)
-                // Por ahora solo notificamos
-                break; // Solo comemos una
+            } else {
+                // CORRECCIÓN: Se eliminó el "if (ficha.isEnBase())" que pedía el 5.
+                // Ahora muestra un mensaje genérico si el movimiento no es válido por otra razón.
+                servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"❌ Movimiento no válido.\" }");
             }
         }
-    }
+    } catch (Exception e) { e.printStackTrace(); }
+}
     
-    private boolean esSeguro(int pos) {
-        for (int s : SEGUROS) if (s == pos) return true;
-        return false;
+    private void verificarColision(Ficha fichaMoviendo) {
+        int[] seguros = {1, 5, 12, 17, 22, 29, 34, 39, 46, 51, 56, 63, 68};
+        boolean esSeguro = false;
+        for(int s : seguros) if(s == fichaMoviendo.getPosicion()) esSeguro = true;
+        
+        if(!esSeguro) {
+            for (Ficha otra : pizarra.getTablero().getTodasLasFichas()) {
+                if (!otra.isEnBase() && 
+                    otra.getPosicion() == fichaMoviendo.getPosicion() && 
+                    !otra.getColor().equals(fichaMoviendo.getColor())) {
+                    
+                    otra.regresarABase();
+                    servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡COMIDA! " + fichaMoviendo.getColor() + " envía a casa a " + otra.getColor() + ".\" }");
+                    break; 
+                }
+            }
+        }
     }
     
     private int obtenerSalidaPorColor(String color) {
@@ -170,9 +175,7 @@ public class Control implements Observer {
 
     private void aplicarPenalizacionTresSeises() {
         Jugador actual = pizarra.getJugadores().get(pizarra.getTurnoActualIndex());
-        List<Ficha> misFichas = pizarra.getTablero().getFichasDelColor(actual.getColor());
-        
-        for(Ficha f : misFichas) {
+        for(Ficha f : pizarra.getTablero().getFichasDelColor(actual.getColor())) {
              if (!f.isEnBase() && !f.isEnMeta()) {
                  f.regresarABase();
                  break; 
