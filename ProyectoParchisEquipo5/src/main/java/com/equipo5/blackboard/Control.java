@@ -93,56 +93,52 @@ public class Control implements Observer {
         }
     }
 
-  private void handleMoverFicha(String idFichaStr) {
-    if (!dadoLanzadoEnEsteTurno) {
-        servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡Tira el dado primero!\" }");
-        return;
-    }
-
-    try {
-        int idFicha = Integer.parseInt(idFichaStr);
-        Jugador actual = pizarra.getJugadores().get(pizarra.getTurnoActualIndex());
-        Ficha ficha = null;
-        
-        // Buscar la ficha que corresponde al ID recibido
-        for (Ficha f : pizarra.getTablero().getFichasDelColor(actual.getColor())) {
-            if (f.getId() == idFicha) { ficha = f; break; }
+    private void handleMoverFicha(String idFichaStr) {
+        if (!dadoLanzadoEnEsteTurno) {
+             servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡Tira el dado primero!\" }");
+             return;
         }
-        
-        if (ficha != null) {
-            // Se asume que en Tablero.java ya cambiaste esMovimientoValido para que retorne true al salir de base
-            if (pizarra.getTablero().esMovimientoValido(ficha, ultimoValorDado)) {
-                
-                if (ficha.isEnBase()) {
-                    // Lógica para sacar la ficha de la base
-                    ficha.setEnBase(false);
-                    ficha.setPosicion(obtenerSalidaPorColor(actual.getColor()));
-                    // Mensaje actualizado para reflejar la salida exitosa sin mencionar el 5
-                    servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡Ficha sale a la casilla de salida!\" }");
-                } else {
-                    // Lógica normal de movimiento
-                    ficha.avanzar(ultimoValorDado);
-                    verificarColision(ficha);
-                }
 
-                enviarEstadoTablero();
-                
-                // Si saca 6, repite turno; si no, cambia
-                if (ultimoValorDado == 6) {
-                    dadoLanzadoEnEsteTurno = false; 
-                    servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡6! Repites turno.\" }");
-                } else {
-                    cambiarTurno();
-                }
-                
-            } else {
-                // CORRECCIÓN: Se eliminó el "if (ficha.isEnBase())" que pedía el 5.
-                // Ahora muestra un mensaje genérico si el movimiento no es válido por otra razón.
-                servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"❌ Movimiento no válido.\" }");
+        try {
+            int idFicha = Integer.parseInt(idFichaStr);
+            Jugador actual = pizarra.getJugadores().get(pizarra.getTurnoActualIndex());
+            Ficha ficha = null;
+            
+            for (Ficha f : pizarra.getTablero().getFichasDelColor(actual.getColor())) {
+                if (f.getId() == idFicha) { ficha = f; break; }
             }
-        }
-    } catch (Exception e) { e.printStackTrace(); }
-}
+            
+            if (ficha != null) {
+                if (pizarra.getTablero().esMovimientoValido(ficha, ultimoValorDado)) {
+                    
+                    if (ficha.isEnBase()) {
+                        ficha.setEnBase(false);
+                        ficha.setPosicion(obtenerSalidaPorColor(actual.getColor()));
+                        servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡Ficha sale a la casilla de salida!\" }");
+                    } else {
+                        ficha.avanzar(ultimoValorDado);
+                        verificarColision(ficha);
+                    }
+
+                    enviarEstadoTablero();
+                    
+                    if (ultimoValorDado == 6) {
+                        dadoLanzadoEnEsteTurno = false; 
+                        servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡6! Repites turno.\" }");
+                    } else {
+                        cambiarTurno();
+                    }
+                    
+                } else {
+                    if (ficha.isEnBase()) {
+                        servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"❌ Necesitas un 5 para sacar esta ficha.\" }");
+                    } else {
+                        servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"❌ Movimiento no válido.\" }");
+                    }
+                }
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+    }
     
     private void verificarColision(Ficha fichaMoviendo) {
         int[] seguros = {1, 5, 12, 17, 22, 29, 34, 39, 46, 51, 56, 63, 68};
