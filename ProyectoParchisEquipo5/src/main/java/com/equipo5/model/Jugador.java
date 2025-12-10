@@ -30,11 +30,21 @@ public class Jugador {
     
     public boolean isListo() { return listo; }
     public void setListo(boolean listo) { this.listo = listo; }
+    
+    public void setAvatar(String avatar) {
+    this.avatar = avatar;
+}
+    
 
-    @Override
-    public String toString() {
-        return displayName + (listo ? " [LISTO]" : " [ESPERANDO]");
-    }
+public String getAvatar() {
+    return avatar;
+}
+
+// Modifica el toString para que incluya el avatar (útil para depuración)
+@Override
+public String toString() {
+    return displayName + " (" + avatar + ")" + (listo ? " [LISTO]" : " [ESPERANDO]");
+}
     
     @Override
     public boolean equals(Object obj) {

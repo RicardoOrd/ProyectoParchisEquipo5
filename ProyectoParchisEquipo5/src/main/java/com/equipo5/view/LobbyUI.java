@@ -241,43 +241,76 @@ public class LobbyUI extends JFrame {
         }
     }
     
+// EN: LobbyUI.java
+
     private void actualizarListaVisual(String mensajeRaw) {
         panelJugadores.removeAll();
         String[] lineas = mensajeRaw.split("\\|");
+        
+        // --- NUEVO: Variables para controlar el estado del botón ---
+        boolean todosListos = true;
+        int contadorJugadores = 0;
+        // -----------------------------------------------------------
         
         for (String linea : lineas) {
             String texto = linea.trim();
             if (texto.isEmpty() || texto.equals("Jugadores en sala:")) continue;
             
+            // Contamos jugadores reales
+            contadorJugadores++;
+
+            // Verificamos si este jugador específico está listo
+            boolean isListo = texto.contains("(LISTO)");
+            
+            // Si al menos UNO no está listo, la bandera global se cae
+            if (!isListo) {
+                todosListos = false;
+            }
+            
+            // --- CÓDIGO VISUAL DE LA TARJETA (Ya lo tenías) ---
             JPanel card = new JPanel(new BorderLayout());
             
             card.setMaximumSize(new Dimension(2000, 50)); 
-            card.setPreferredSize(new Dimension(300, 50)); // Ancho flexible, alto fijo
+            card.setPreferredSize(new Dimension(300, 50)); 
             card.setMinimumSize(new Dimension(300, 50));
             
             card.setBorder(new CompoundBorder(
-                new EmptyBorder(0, 0, 8, 0), // Margen inferior entre tarjetas (espacio blanco)
-                BorderFactory.createLineBorder(new Color(220, 220, 220), 1) // Borde gris suave
+                new EmptyBorder(0, 0, 8, 0), 
+                BorderFactory.createLineBorder(new Color(220, 220, 220), 1)
             ));
             
-            boolean isListo = texto.contains("(LISTO)");
             card.setBackground(isListo ? new Color(255, 250, 205) : new Color(248, 248, 248));
             
             JLabel lblTexto = new JLabel(texto.replace("- ", ""));
             lblTexto.setFont(new Font("Segoe UI", Font.BOLD, 14));
             lblTexto.setForeground(Color.DARK_GRAY);
-            lblTexto.setBorder(new EmptyBorder(0, 15, 0, 0)); // Padding izquierdo del texto
+            lblTexto.setBorder(new EmptyBorder(0, 15, 0, 0)); 
             
             JLabel lblIcono = new JLabel(isListo ? "✔" : "⏳");
             lblIcono.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 18));
             lblIcono.setForeground(isListo ? new Color(0, 150, 0) : Color.GRAY);
-            lblIcono.setBorder(new EmptyBorder(0, 0, 0, 15)); // Padding derecho
+            lblIcono.setBorder(new EmptyBorder(0, 0, 0, 15)); 
             
             card.add(lblTexto, BorderLayout.CENTER);
             card.add(lblIcono, BorderLayout.EAST);
             
             panelJugadores.add(card);
         }
+        
+        // --- NUEVO: Lógica del Botón Iniciar (Solo para Anfitrión) ---
+        if (esAnfitrion && btnIniciar != null) {
+            // Regla: Mínimo 2 jugadores Y todos deben estar listos
+            if (contadorJugadores >= 2 && todosListos) {
+                btnIniciar.setBackground(new Color(0, 204, 102)); // VERDE
+                btnIniciar.setText("INICIAR PARTIDA"); // Confirmación visual
+                btnIniciar.setEnabled(true);
+            } else {
+                btnIniciar.setBackground(COLOR_BOTON_INICIAR); // Color original (Rojo/Naranja)
+                btnIniciar.setText("ESPERANDO JUGADORES...");
+                // Opcional: btnIniciar.setEnabled(false); // Si quieres bloquearlo físicamente
+            }
+        }
+        // -----------------------------------------------------------
         
         panelJugadores.revalidate();
         panelJugadores.repaint();

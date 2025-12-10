@@ -58,14 +58,14 @@ public class Tablero {
     }
 
     public boolean esMovimientoValido(Ficha f, int valorDado) {
-        if (f.isEnMeta()) return false; 
+    if (f.isEnMeta()) return false; 
 
-        if (f.isEnBase()) {
-            return (valorDado == 5);
-        } else {
-            // Validación simple: Si está en el tablero, puede avanzar.
-            // Aquí se podría añadir lógica de barreras o llegada exacta a meta en el futuro.
-            return true;
-        }
+    if (f.isEnBase()) {
+        // CAMBIO: Permitir salir con cualquier número (o al menos con >= 1)
+        // Antes era: return (valorDado == 5);
+        return true; 
+    } else {
+        return true;
     }
+}
 }

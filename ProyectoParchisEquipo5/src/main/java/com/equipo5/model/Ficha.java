@@ -18,13 +18,53 @@ public class Ficha {
     // --- Métodos de Lógica ---
     
     public void avanzar(int pasos) {
-        this.enBase = false; 
-        this.posicion += pasos;
-        
-        if (this.posicion > 68) {
-            this.posicion -= 68;
+        for (int i = 0; i < pasos; i++) {
+            moverUnPaso();
         }
     }
+
+private void moverUnPaso() {
+    if (enMeta) return;
+
+    // --- 1. YA DENTRO DEL PASILLO ---
+    if (posicion >= 100) {
+        if (posicion % 100 == 7) {
+            enMeta = true; 
+        } else {
+            posicion++; 
+        }
+        return;
+    }
+
+    // --- 2. ENTRADA A PASILLOS ---
+    // Verificamos si estamos EN la casilla de entrada y vamos a avanzar
+    
+    // ROJO (Entrada en 34)
+    if (color.equals("ROJO") && posicion == 34) {
+        posicion = 301; return;
+    }
+    
+    // AMARILLO (Entrada en 68)
+    if (color.equals("AMARILLO") && posicion == 68) {
+        posicion = 101; return;
+    }
+    
+    // AZUL (Entrada en 17)
+    if (color.equals("AZUL") && posicion == 17) {
+        posicion = 201; return;
+    }
+    
+    // VERDE (Entrada en 51)
+    if (color.equals("VERDE") && posicion == 51) {
+        posicion = 401; return;
+    }
+
+    // --- 3. MOVIMIENTO NORMAL ---
+    posicion++;
+    if (posicion > 68) {
+        posicion = 1;
+    }
+}
 
     public void regresarABase() {
         this.posicion = 0;

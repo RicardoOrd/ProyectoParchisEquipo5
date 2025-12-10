@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 public class Cliente {
@@ -30,7 +31,8 @@ public class Cliente {
         this.tableroView = tablero; 
     }
 
-    public void conectar(String host, int puerto, String nickname) {
+// Cambia la firma del método y el JSON que se envía
+    public void conectar(String host, int puerto, String nickname, String avatar, String codigoSala) {
         this.miNombre = nickname;
         try {
             socket = new Socket(host, puerto);
@@ -39,7 +41,10 @@ public class Cliente {
 
             new Thread(this::escucharServidor).start();
 
-            enviar("{ \"type\": \"LOGIN\", \"name\": \"" + nickname + "\" }");
+            // Enviamos el código en el JSON
+            enviar("{ \"type\": \"LOGIN\", \"name\": \"" + nickname + 
+                   "\", \"avatar\": \"" + avatar + 
+                   "\", \"code\": \"" + codigoSala + "\" }");
 
         } catch (IOException e) {
             System.err.println("Error conectando al servidor: " + e.getMessage());
@@ -63,11 +68,21 @@ public class Cliente {
         }
     }
 
-    private void procesarMensaje(String json) {
+private void procesarMensaje(String json) {
         System.out.println("Cliente recibe: " + json);
 
-        // chat
-        if (json.contains("\"type\": \"CHAT\"")) {
+        // 1. Manejo de ERRORES (NUEVO)
+        if (json.contains("\"type\": \"ERROR\"")) {
+            String msg = json.split("\"msg\": \"")[1].split("\"")[0];
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(lobbyView, "Error: " + msg);
+                if (lobbyView != null) lobbyView.dispose(); // Cierra el lobby vacío
+                new com.equipo5.view.MenuUI().setVisible(true); // Vuelve al menú
+            });
+        }
+        
+        // 2. Chat
+        else if (json.contains("\"type\": \"CHAT\"")) {
             try {
                 String sender = json.split("\"sender\": \"")[1].split("\"")[0];
                 String msg = json.split("\"msg\": \"")[1].split("\"")[0];
