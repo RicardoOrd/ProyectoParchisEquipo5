@@ -6,7 +6,7 @@ import com.equipo5.model.Jugador;
 import com.equipo5.net.Servidor;
 
 public class KSMoverFicha implements FuenteConocimineto {
-    
+
     private KSReglasJuego reglas = new KSReglasJuego();
 
     @Override
@@ -21,25 +21,34 @@ public class KSMoverFicha implements FuenteConocimineto {
             int idFicha = Integer.parseInt(idFichaStr);
             Jugador actual = pizarra.getJugadores().get(pizarra.getTurnoActualIndex());
             Ficha ficha = null;
-            
+
             // Buscar la ficha solicitada
             for (Ficha f : pizarra.getTablero().getFichasDelColor(actual.getColor())) {
-                if (f.getId() == idFicha) { ficha = f; break; }
+                if (f.getId() == idFicha) {
+                    ficha = f;
+                    break;
+                }
             }
-            
+
             if (ficha != null) {
                 int valorDado = pizarra.getUltimoValorDado();
-                
-                // 2. Validar movimiento con la lógica básica del Tablero
-                if (pizarra.getTablero().esMovimientoValido(ficha, valorDado)) {
-                    
+                boolean regla5Activa = pizarra.getInfoSala().isReglaSalida5(); // Obtener regla
+
+                // 2. Validar movimiento pasando la regla
+                if (pizarra.getTablero().esMovimientoValido(ficha, valorDado, regla5Activa)) {
+
                     if (ficha.isEnBase()) {
-                        // --- REGLA: SALIDA SOLO CON 5 ---
-                        // Verificamos si la regla está activa en la configuración de la Sala.
+                        // YA NO NECESITAS EL BLOQUE IF MANUAL AQUÍ
+                        // Porque esMovimientoValido ya devolvió false si no era 5.
+                        // Pero puedes dejar el mensaje de log específico si quieres, 
+                        // aunque técnicamente nunca entrará aquí si no es válido.
+
+                        // Salir de base
+                        ficha.setEnBase(false);                   // Verificamos si la regla está activa en la configuración de la Sala.
                         // Si está activa Y el valor NO es 5, impedimos salir.
                         if (pizarra.getInfoSala().isReglaSalida5() && valorDado != 5) {
                             servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"❌ Regla activa: Necesitas un 5 para salir de casa.\" }");
-                            return; 
+                            return;
                         }
 
                         // Salir de base
@@ -59,7 +68,7 @@ public class KSMoverFicha implements FuenteConocimineto {
 
                     // Actualizar clientes
                     KSNotificador.enviarEstadoTablero(pizarra, servidor);
-                    
+
                     // --- NUEVO: VERIFICAR VICTORIA ---
                     if (reglas.verificarVictoria(pizarra, actual.getColor())) {
                         servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"🏆 ¡EL JUGADOR " + actual.getNombre() + " HA GANADO! 🏆\" }");
@@ -68,21 +77,21 @@ public class KSMoverFicha implements FuenteConocimineto {
                         return; // Salir para no cambiar turno
                     }
                     // ---------------------------------
-                    
+
                     // 3. Gestión de Turno (Solo si nadie ha ganado aún)
                     if (valorDado == 6) {
-                        pizarra.setDadoLanzadoEnEsteTurno(false); 
+                        pizarra.setDadoLanzadoEnEsteTurno(false);
                         servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"¡Sacaste 6! Repites turno.\" }");
                     } else {
                         KSNotificador.cambiarTurno(pizarra, servidor);
                     }
-                    
+
                 } else {
                     servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"❌ Movimiento no válido.\" }");
                 }
             }
-        } catch (Exception e) { 
-            e.printStackTrace(); 
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

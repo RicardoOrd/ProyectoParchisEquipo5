@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 public class Tablero {
+
     private Map<String, List<Ficha>> fichasPorJugador;
 
     public Tablero() {
@@ -15,7 +16,7 @@ public class Tablero {
     public void inicializarFichas(List<Jugador> jugadores) {
         fichasPorJugador.clear();
         String[] coloresDisponibles = {"AMARILLO", "AZUL", "ROJO", "VERDE"};
-        
+
         int i = 0;
         for (Jugador jugador : jugadores) {
             if (jugador.getColor() == null && i < coloresDisponibles.length) {
@@ -35,7 +36,7 @@ public class Tablero {
     public List<Ficha> getFichasDelColor(String color) {
         return fichasPorJugador.getOrDefault(color, new ArrayList<>());
     }
-    
+
     public List<Ficha> getTodasLasFichas() {
         List<Ficha> todas = new ArrayList<>();
         for (List<Ficha> lista : fichasPorJugador.values()) {
@@ -43,29 +44,33 @@ public class Tablero {
         }
         return todas;
     }
-    
-    public boolean tieneMovimientosPosibles(String color, int valorDado) {
-        // Optimización: Si el valor es 5, siempre se puede salir de casa (a menos que la salida esté bloqueada, que no implementamos aún)
-        // Si no es 5, solo se pueden mover fichas que NO estén en casa y NO estén en meta.
-        
+
+// Modificamos la firma para recibir la regla
+    public boolean tieneMovimientosPosibles(String color, int valorDado, boolean obligarSalida5) {
         List<Ficha> fichas = getFichasDelColor(color);
         for (Ficha f : fichas) {
-            if (esMovimientoValido(f, valorDado)) {
-                return true; 
+            // Pasamos la regla a la validación individual
+            if (esMovimientoValido(f, valorDado, obligarSalida5)) {
+                return true;
             }
         }
         return false;
     }
 
-    public boolean esMovimientoValido(Ficha f, int valorDado) {
-    if (f.isEnMeta()) return false; 
+    public boolean esMovimientoValido(Ficha f, int valorDado, boolean obligarSalida5) {
+        if (f.isEnMeta()) {
+            return false;
+        }
 
-    if (f.isEnBase()) {
-        // CAMBIO: Permitir salir con cualquier número (o al menos con >= 1)
-        // Antes era: return (valorDado == 5);
-        return true; 
-    } else {
-        return true;
+        if (f.isEnBase()) {
+            // Si la regla está activa (true), SOLO es válido si el dado es 5.
+            if (obligarSalida5) {
+                return (valorDado == 5);
+            }
+            // Si la regla NO está activa, permitimos salir con cualquier número (lógica anterior)
+            return true;
+        } else {
+            return true;
+        }
     }
-}
 }

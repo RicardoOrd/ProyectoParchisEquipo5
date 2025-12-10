@@ -53,8 +53,12 @@ public class KSLanzarDado implements FuenteConocimineto {
             pizarra.setContadorSeisesTurno(0);
         }
 
-        // 4. Verificar si puede mover
-        boolean puedeMover = pizarra.getTablero().tieneMovimientosPosibles(actual.getColor(), valor);
+// 4. Verificar si puede mover
+        // Obtenemos si la regla está activa desde la Pizarra
+        boolean regla5Activa = pizarra.getInfoSala().isReglaSalida5();
+        
+        // Pasamos el booleano al método actualizado
+        boolean puedeMover = pizarra.getTablero().tieneMovimientosPosibles(actual.getColor(), valor, regla5Activa);
         
         if (!puedeMover) {
             servidor.broadcast("{ \"type\": \"LOG\", \"msg\": \"No tienes movimientos con un " + valor + ".\" }");
